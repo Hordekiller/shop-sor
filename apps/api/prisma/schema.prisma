@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String  @unique
+  phone     String? @unique
+  password  String
+  role      Role    @default(CUSTOMER)
+  avatar    String?
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders         Order[]
+  reviews        Review[]
+  addresses      Address[]
+  ownedShop      Shop?
+  vendorOrders   VendorOrder[]
+  coupons        Coupon[]
+}
+
+model Shop {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String   @unique
+  description String?
+  logo        String?
+  cover       String?
+  isActive    Boolean  @default(false)
+  commission  Float    @default(10.0)
+  ownerId     Int      @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner        User           @relation(fields: [ownerId], references: [id])
+  products     Product[]
+  vendorOrders VendorOrder[]
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String   @unique
+  description String?
+  image       String?
+  parentId    Int?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+  products Product[]
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  title       String
+  slug        String   @unique
+  description String?
+  price       Float    @default(0)
+  salePrice   Float?
+  sku         String?
+  stock       Int      @default(0)
+  type        String   @default("simple")
+  isActive    Boolean  @default(true)
+  weight      Float?
+  filePath    String?
+  images      String   @default("[]")
+  attributes  String   @default("{}")
+  metaTitle   String?
+  metaDesc    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  categoryId  Int
+  shopId      Int?
+  category    Category   @relation(fields: [categoryId], references: [id])
+  shop        Shop?      @relation(fields: [shopId], references: [id])
+  orderItems  OrderItem[]
+  reviews     Review[]
+  coupons     Coupon[]
+}
+
+model Order {
+  id              Int      @id @default(autoincrement())
+  orderNumber     String   @unique
+  subtotal        Float
+  shippingCost    Float    @default(0)
+  discount        Float    @default(0)
+  total           Float
+  status          String   @default("pending")
+  paymentStatus   String   @default("unpaid")
+  paymentMethod   String?
+  shippingMethod  String?
+  notes           String?
+  paidAt          DateTime?
+  shippingAddress String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userId      Int
+  user        User        @relation(fields: [userId], references: [id])
+  items       OrderItem[]
+  payments    Payment[]
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  quantity  Int     @default(1)
+  price     Float
+  total     Float
+
+  orderId   Int
+  productId Int
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id            Int      @id @default(autoincrement())
+  amount        Float
+  authority     String?
+  referenceId   String?
+  status        String   @default("pending")
+  gateway       String?
+  paidAt        DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  orderId       Int
+  order         Order @relation(fields: [orderId], references: [id])
+}
+
+model Review {
+  id      Int     @id @default(autoincrement())
+  rating  Int     @default(5)
+  comment String?
+  isApproved Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  userId    Int
+  productId Int
+  user      User    @relation(fields: [userId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+}
+
+model Address {
+  id        Int    @id @default(autoincrement())
+  province  String
+  city      String
+  district  String?
+  street    String
+  alley     String?
+  plaque    String?
+  postalCode String?
+  lat       Float?
+  lng       Float?
+  isDefault Boolean @default(false)
+
+  userId    Int
+  user      User   @relation(fields: [userId], references: [id])
+}
+
+model Coupon {
+  id           Int      @id @default(autoincrement())
+  code         String   @unique
+  type         String   @default("percent")
+  value        Float
+  minOrder     Float    @default(0)
+  maxUses      Int?
+  usedCount    Int      @default(0)
+  expiresAt    DateTime?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  userId       Int?
+  productId    Int?
+  user         User?    @relation(fields: [userId], references: [id])
+  product      Product? @relation(fields: [productId], references: [id])
+}
+
+model VendorOrder {
+  id          Int      @id @default(autoincrement())
+  amount      Float
+  commission  Float
+  netAmount   Float
+  status      String   @default("pending")
+  settledAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  shopId      Int
+  orderId     Int
+  shop        Shop     @relation(fields: [shopId], references: [id])
+  order       Order    @relation(fields: [orderId], references: [id])
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  VENDOR
+  CUSTOMER
+}

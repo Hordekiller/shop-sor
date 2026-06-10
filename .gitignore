@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.next/
+turbo/
+.turbo/
+
+# Laravel
+/vendor/
+/storage/
+/bootstrap/cache/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
