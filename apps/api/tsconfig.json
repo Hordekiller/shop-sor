@@ -20,5 +20,6 @@
     "paths": {
       "@atlas-shop/shared-types": ["../../packages/shared-types/src"]
     }
-  }
+  },
+  "exclude": ["prisma", "node_modules", "dist"]
 }

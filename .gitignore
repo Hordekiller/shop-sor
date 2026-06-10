@@ -24,5 +24,8 @@ turbo/
 .DS_Store
 Thumbs.db
 
+# Uploads
+uploads/
+
 # Next.js
 apps/*/next-env.d.ts
