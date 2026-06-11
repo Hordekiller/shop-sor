@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import JalaliDate from '@/components/JalaliDate';
 
 interface Product {
   id: number;
@@ -95,7 +96,13 @@ export default function ProductsPage() {
                       {product.isActive ? 'فعال' : 'غیرفعال'}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 flex gap-2">
+                    <a
+                      href={`/products/${product.id}`}
+                      className="text-indigo-500 hover:text-indigo-700 text-xs"
+                    >
+                      ویرایش
+                    </a>
                     <button
                       onClick={() => handleDelete(product.id)}
                       className="text-red-500 hover:text-red-700 text-xs"

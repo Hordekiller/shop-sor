@@ -13,6 +13,8 @@ export default function NewProductPage() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
 
   const [form, setForm] = useState({
     title: '',
@@ -29,6 +31,32 @@ export default function NewProductPage() {
     api.get<Category[]>('/categories').then(setCategories).catch(console.error);
   }, []);
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('atlas_token')}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (data.url) {
+        setImages((prev) => [...prev, data.url]);
+      }
+    } catch (err) {
+      alert('Upload failed');
+    }
+    setUploading(false);
+  };
+
+  const removeImage = (url: string) => {
+    setImages((prev) => prev.filter((i) => i !== url));
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -43,6 +71,7 @@ export default function NewProductPage() {
         stock: parseInt(form.stock) || 0,
         categoryId: parseInt(form.categoryId),
         sku: form.sku || undefined,
+        images,
       });
       router.push('/products');
     } catch (err) {
@@ -132,6 +161,29 @@ export default function NewProductPage() {
               onChange={(e) => setForm({ ...form, sku: e.target.value })}
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">تصاویر محصول</label>
+          <div className="flex flex-wrap gap-3 mb-3">
+            {images.map((url) => (
+              <div key={url} className="relative group">
+                <img src={url} alt="" className="w-24 h-24 object-cover rounded-lg border" />
+                <button
+                  type="button"
+                  onClick={() => removeImage(url)}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {uploading && <div className="w-24 h-24 rounded-lg border border-dashed flex items-center justify-center text-gray-400 text-sm">در حال آپلود...</div>}
+          </div>
+          <label className="cursor-pointer inline-block rounded-lg border border-dashed px-4 py-2 text-sm text-gray-500 hover:border-indigo-400 hover:text-indigo-600">
+            انتخاب تصویر
+            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+          </label>
         </div>
 
         <div>

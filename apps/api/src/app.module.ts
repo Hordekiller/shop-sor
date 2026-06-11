@@ -10,6 +10,8 @@ import { ShopsModule } from './modules/shops/shops.module';
 import { CouponsModule } from './modules/coupons/coupons.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { ShippingModule } from './modules/shipping/shipping.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
@@ -25,6 +27,8 @@ import { UploadModule } from './modules/upload/upload.module';
     CouponsModule,
     ReviewsModule,
     PaymentsModule,
+    AdminModule,
+    ShippingModule,
     UploadModule,
   ],
 })

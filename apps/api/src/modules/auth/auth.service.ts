@@ -83,6 +83,14 @@ export class AuthService {
     return this.jwtService.sign({ sub: userId, role });
   }
 
+  async updateProfile(userId: number, data: { name?: string; phone?: string; avatar?: string }) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+    return this.sanitizeUser(user);
+  }
+
   sanitizeUser(user: any) {
     const { password, ...rest } = user;
     return rest;
