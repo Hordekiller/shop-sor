@@ -20,6 +20,11 @@ const gradients = [
   'from-[#dc2626] to-[#b91c1c]', 'from-[#0891b2] to-[#0e7490]',
 ];
 
+const emptySlide: Slide = {
+  title: '', description: '', bgColor: gradients[0],
+  image: '', link: '', sortOrder: 0, isActive: true,
+};
+
 export default function SettingsPage() {
   const { addToast } = useToast();
   const [tab, setTab] = useState<'general' | 'slides' | 'sections'>('general');
@@ -35,14 +40,14 @@ export default function SettingsPage() {
 
   // Slides
   const [slides, setSlides] = useState<Slide[]>([]);
-  const [editSlide, setEditSlide] = useState<Slide | null>(null);
+  const [editSlide, setEditSlide] = useState<Slide>({ ...emptySlide });
   const [showSlideForm, setShowSlideForm] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   // Sections
   const [sections, setSections] = useState<Section[]>([]);
 
-  useEffect(() => {
+  const fetchData = () => {
     setLoading(true);
     Promise.all([
       api.get<Record<string, string>>('/settings'),
@@ -62,9 +67,13 @@ export default function SettingsPage() {
       if (settings.sections) {
         try { setSections(JSON.parse(settings.sections)); } catch {}
       }
-    }).catch((err) => addToast('خطا در بارگذاری تنظیمات', 'error'))
-    .finally(() => setLoading(false));
-  }, []);
+    }).catch((err) => {
+      console.error('Fetch error:', err);
+      addToast('خطا در بارگذاری تنظیمات: ' + err.message, 'error');
+    }).finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchData(); }, []);
 
   const handleSaveGeneral = async (e: FormEvent) => {
     e.preventDefault();
@@ -72,35 +81,46 @@ export default function SettingsPage() {
     try {
       await api.put('/settings', form);
       addToast('تنظیمات ذخیره شد', 'success');
-    } catch { addToast('خطا در ذخیره', 'error'); }
-    finally { setSaving(false); }
+    } catch (err: any) {
+      addToast('خطا در ذخیره: ' + err.message, 'error');
+    } finally { setSaving(false); }
   };
 
   const handleUploadImage = async (file: File): Promise<string> => {
     setUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    const token = localStorage.getItem('atlas_token');
-    const res = await fetch('http://localhost:8000/api/v1/upload', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-    setUploading(false);
-    if (!res.ok) throw new Error('Upload failed');
-    const data = await res.json();
-    return data.url;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const token = localStorage.getItem('atlas_token');
+      const res = await fetch('http://localhost:8000/api/v1/upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'Upload failed' }));
+        throw new Error(err.message || 'Upload failed');
+      }
+      const data = await res.json();
+      return data.url;
+    } finally { setUploading(false); }
   };
 
-  const resetSlideForm = () => setEditSlide({
-    title: '', description: '', bgColor: gradients[0], image: '', link: '', sortOrder: slides.length, isActive: true,
-  });
+  const openNewSlide = () => {
+    setEditSlide({ ...emptySlide, sortOrder: slides.length });
+    setShowSlideForm(true);
+  };
 
-  const openNewSlide = () => { resetSlideForm(); setShowSlideForm(true); };
-  const openEditSlide = (s: Slide) => { setEditSlide({ ...s }); setShowSlideForm(true); };
+  const openEditSlide = (s: Slide) => {
+    setEditSlide({ ...s });
+    setShowSlideForm(true);
+  };
 
   const handleSaveSlide = async () => {
-    if (!editSlide || !editSlide.title.trim()) return addToast('عنوان اسلاید الزامی است', 'error');
+    if (!editSlide.title.trim()) {
+      addToast('عنوان اسلاید الزامی است', 'error');
+      return;
+    }
     setSaving(true);
     try {
       if (editSlide.id) {
@@ -113,8 +133,10 @@ export default function SettingsPage() {
         addToast('اسلاید ایجاد شد', 'success');
       }
       setShowSlideForm(false);
-    } catch { addToast('خطا در ذخیره اسلاید', 'error'); }
-    finally { setSaving(false); }
+    } catch (err: any) {
+      console.error('Slide save error:', err);
+      addToast('خطا در ذخیره اسلاید: ' + err.message, 'error');
+    } finally { setSaving(false); }
   };
 
   const handleDeleteSlide = async (id: number) => {
@@ -123,7 +145,9 @@ export default function SettingsPage() {
       await api.delete(`/slides/${id}`);
       setSlides(slides.filter((s) => s.id !== id));
       addToast('اسلاید حذف شد', 'success');
-    } catch { addToast('خطا در حذف', 'error'); }
+    } catch (err: any) {
+      addToast('خطا در حذف: ' + err.message, 'error');
+    }
   };
 
   const addSection = () => setSections([...sections, { type: 'products', title: '', sort: 'newest', count: 12 }]);
@@ -137,15 +161,23 @@ export default function SettingsPage() {
     try {
       await api.put('/settings', { sections: JSON.stringify(sections) });
       addToast('سکشن‌ها ذخیره شدند', 'success');
-    } catch { addToast('خطا در ذخیره', 'error'); }
-    finally { setSaving(false); }
+    } catch (err: any) {
+      addToast('خطا در ذخیره: ' + err.message, 'error');
+    } finally { setSaving(false); }
   };
 
-  if (loading) return <div className="flex items-center justify-center py-20"><div className="animate-spin w-8 h-8 border-2 border-[var(--dk-primary)] border-t-transparent rounded-full" /></div>;
+  if (loading) {
+    return <div className="flex items-center justify-center py-20">
+      <div className="animate-spin w-8 h-8 border-2 border-[var(--dk-primary)] border-t-transparent rounded-full" />
+    </div>;
+  }
 
   return (
-    <div className="space-y-6" dir="rtl">
-      <h2 className="text-xl font-semibold">تنظیمات فروشگاه</h2>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">تنظیمات فروشگاه</h2>
+        <button onClick={fetchData} className="text-xs text-indigo-600 hover:underline">بروزرسانی</button>
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-200 pb-3">
@@ -163,7 +195,7 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {/* Tab Content */}
+      {/* Tab: General */}
       {tab === 'general' && (
         <form onSubmit={handleSaveGeneral} className="bg-white rounded-xl p-6 shadow-sm border space-y-4 max-w-2xl">
           <div className="grid md:grid-cols-2 gap-4">
@@ -210,27 +242,32 @@ export default function SettingsPage() {
         </form>
       )}
 
+      {/* Tab: Slides */}
       {tab === 'slides' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">{slides.length} اسلاید</p>
-            <button onClick={openNewSlide}
+            <button onClick={openNewSlide} type="button"
               className="rounded-lg bg-[var(--dk-primary)] text-white px-4 py-2 text-sm hover:brightness-110 transition">
               + اسلاید جدید
             </button>
           </div>
 
-          {/* Slide Form Modal */}
-          {showSlideForm && editSlide && (
-            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowSlideForm(false)}>
-              <div className="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4" onClick={(e) => e.stopPropagation()}>
+          {/* Slide Modal */}
+          {showSlideForm && (
+            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+              onClick={() => setShowSlideForm(false)}>
+              <div className="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4"
+                onClick={(e) => e.stopPropagation()}>
+
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold">{editSlide.id ? 'ویرایش اسلاید' : 'اسلاید جدید'}</h3>
-                  <button onClick={() => setShowSlideForm(false)} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+                  <button type="button" onClick={() => setShowSlideForm(false)}
+                    className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">عنوان</label>
+                  <label className="block text-xs text-gray-500 mb-1">عنوان *</label>
                   <input type="text" className="w-full rounded-lg border px-3 py-2 text-sm" value={editSlide.title}
                     onChange={(e) => setEditSlide({ ...editSlide, title: e.target.value })} />
                 </div>
@@ -264,88 +301,121 @@ export default function SettingsPage() {
                   <label className="block text-xs text-gray-500 mb-1">رنگ پس‌زمینه</label>
                   <div className="flex flex-wrap gap-2">
                     {gradients.map((g) => (
-                      <button key={g} type="button" onClick={() => setEditSlide({ ...editSlide, bgColor: g })}
-                        className={`w-8 h-8 rounded-lg bg-gradient-to-br ${g} ${editSlide.bgColor === g ? 'ring-2 ring-indigo-500 ring-offset-2' : ''}`} />
+                      <button key={g} type="button"
+                        onClick={() => setEditSlide({ ...editSlide, bgColor: g })}
+                        className={`w-8 h-8 rounded-lg bg-gradient-to-br ${g} ${
+                          editSlide.bgColor === g ? 'ring-2 ring-indigo-500 ring-offset-2' : ''
+                        }`} />
                     ))}
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">تصویر اسلاید</label>
-                  <input type="file" accept="image/*" onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      const url = await handleUploadImage(file);
-                      setEditSlide({ ...editSlide, image: url });
-                    } catch { addToast('خطا در آپلود تصویر', 'error'); }
-                  }} className="w-full text-sm" />
-                  {uploading && <p className="text-xs text-indigo-500 mt-1">در حال آپلود...</p>}
+                  <input type="file" accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        const url = await handleUploadImage(file);
+                        setEditSlide({ ...editSlide, image: url });
+                        addToast('تصویر آپلود شد', 'success');
+                      } catch (err: any) {
+                        addToast('خطا در آپلود تصویر: ' + err.message, 'error');
+                      }
+                    }}
+                    className="w-full text-sm" />
+                  {uploading && (
+                    <p className="text-xs text-indigo-500 mt-1 flex items-center gap-1">
+                      <span className="inline-block w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                      در حال آپلود...
+                    </p>
+                  )}
                   {editSlide.image && (
-                    <img src={`http://localhost:8000${editSlide.image}`} alt="preview"
-                      className="mt-2 h-24 rounded-lg object-cover" />
+                    <div className="mt-2 relative inline-block">
+                      <img src={`http://localhost:8000${editSlide.image}`} alt="preview"
+                        className="h-24 rounded-lg object-cover border" />
+                      <button type="button" onClick={() => setEditSlide({ ...editSlide, image: '' })}
+                        className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">
+                        &times;
+                      </button>
+                    </div>
                   )}
                 </div>
-                <div className={`h-16 rounded-lg bg-gradient-to-br ${editSlide.bgColor} flex items-center px-4`}>
+                <div className={`h-20 rounded-lg bg-gradient-to-br ${editSlide.bgColor} flex items-center px-6`}>
                   <div className="text-white">
-                    <p className="text-sm font-bold">{editSlide.title || 'عنوان'}</p>
-                    <p className="text-xs text-white/70">{editSlide.description || 'توضیحات'}</p>
+                    <p className="text-base font-bold">{editSlide.title || 'عنوان اسلاید'}</p>
+                    <p className="text-xs text-white/70 mt-0.5">{editSlide.description || 'توضیحات اسلاید'}</p>
                   </div>
                 </div>
-                <button onClick={handleSaveSlide} disabled={saving}
-                  className="w-full rounded-lg bg-indigo-600 text-white py-2.5 text-sm hover:bg-indigo-700 disabled:opacity-50">
-                  {saving ? 'در حال ذخیره...' : 'ذخیره'}
+                <button type="button" onClick={handleSaveSlide} disabled={saving}
+                  className="w-full rounded-lg bg-indigo-600 text-white py-2.5 text-sm hover:bg-indigo-700 disabled:opacity-50 transition">
+                  {saving ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      در حال ذخیره...
+                    </span>
+                  ) : 'ذخیره'}
                 </button>
               </div>
             </div>
           )}
 
           {/* Slides List */}
-          <div className="space-y-3">
-            {slides.map((slide) => (
-              <div key={slide.id} className="bg-white rounded-xl p-4 border shadow-sm flex items-center gap-4">
-                <div className={`w-24 h-16 rounded-lg bg-gradient-to-br ${slide.bgColor} flex items-center justify-center shrink-0`}>
-                  {slide.image ? (
-                    <img src={`http://localhost:8000${slide.image}`} alt="" className="w-full h-full object-cover rounded-lg" />
-                  ) : (
-                    <span className="text-white text-lg font-bold">{slide.title?.[0] || 'S'}</span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-medium truncate">{slide.title}</h4>
-                  <p className="text-xs text-gray-500 truncate">{slide.description || 'بدون توضیحات'}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${slide.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {slide.isActive ? 'فعال' : 'غیرفعال'}
-                    </span>
-                    <span className="text-[10px] text-gray-400">ترتیب: {slide.sortOrder}</span>
+          {slides.length === 0 ? (
+            <div className="text-center py-16 text-gray-400 bg-white rounded-xl border">
+              <div className="text-5xl mb-4">🎠</div>
+              <p className="font-medium">هیچ اسلایدی وجود ندارد</p>
+              <p className="text-xs mt-1">برای شروع، اولین اسلاید را ایجاد کنید</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {slides.map((slide) => (
+                <div key={slide.id} className="bg-white rounded-xl p-4 border shadow-sm flex items-center gap-4 hover:shadow-md transition">
+                  <div className={`w-28 h-20 rounded-lg bg-gradient-to-br ${slide.bgColor} flex items-center justify-center shrink-0 overflow-hidden`}>
+                    {slide.image ? (
+                      <img src={`http://localhost:8000${slide.image}`} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-white text-2xl font-bold">{slide.title?.[0] || 'S'}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-medium truncate">{slide.title}</h4>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ${
+                        slide.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {slide.isActive ? 'فعال' : 'غیرفعال'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 truncate mt-0.5">{slide.description || 'بدون توضیحات'}</p>
+                    <div className="flex items-center gap-3 mt-1.5 text-[10px] text-gray-400">
+                      <span>ترتیب: {slide.sortOrder}</span>
+                      {slide.link && <span>لینک: {slide.link}</span>}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button type="button" onClick={() => openEditSlide(slide)}
+                      className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 hover:bg-gray-50 transition">
+                      ویرایش
+                    </button>
+                    <button type="button" onClick={() => slide.id && handleDeleteSlide(slide.id)}
+                      className="px-3 py-1.5 text-xs rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition">
+                      حذف
+                    </button>
                   </div>
                 </div>
-                <div className="flex gap-2 shrink-0">
-                  <button onClick={() => openEditSlide(slide)}
-                    className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 hover:bg-gray-50 transition">
-                    ویرایش
-                  </button>
-                  <button onClick={() => slide.id && handleDeleteSlide(slide.id)}
-                    className="px-3 py-1.5 text-xs rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition">
-                    حذف
-                  </button>
-                </div>
-              </div>
-            ))}
-            {slides.length === 0 && (
-              <div className="text-center py-12 text-gray-400">
-                <p>هیچ اسلایدی وجود ندارد. اولین اسلاید را ایجاد کنید.</p>
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
+      {/* Tab: Sections */}
       {tab === 'sections' && (
         <div className="space-y-4 max-w-2xl">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">{sections.length} سکشن</p>
-            <button onClick={addSection}
+            <button type="button" onClick={addSection}
               className="rounded-lg bg-[var(--dk-primary)] text-white px-4 py-2 text-sm hover:brightness-110 transition">
               + سکشن جدید
             </button>
@@ -355,7 +425,7 @@ export default function SettingsPage() {
               <div key={i} className="bg-white rounded-xl p-4 border shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-gray-500">سکشن {i + 1}</span>
-                  <button onClick={() => removeSection(i)} className="text-xs text-red-500 hover:underline">حذف</button>
+                  <button type="button" onClick={() => removeSection(i)} className="text-xs text-red-500 hover:underline">حذف</button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
@@ -401,7 +471,7 @@ export default function SettingsPage() {
             ))}
           </div>
           {sections.length > 0 && (
-            <button onClick={handleSaveSections} disabled={saving}
+            <button type="button" onClick={handleSaveSections} disabled={saving}
               className="rounded-lg bg-indigo-600 px-8 py-2.5 text-sm text-white hover:bg-indigo-700 disabled:opacity-50">
               {saving ? 'در حال ذخیره...' : 'ذخیره سکشن‌ها'}
             </button>
