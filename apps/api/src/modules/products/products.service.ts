@@ -6,6 +6,17 @@ import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
 export class ProductsService {
   constructor(private prisma: PrismaService) {}
 
+  private transform(product: any) {
+    if (!product) return product;
+    if (Array.isArray(product)) {
+      return product.map((p) => this.transform(p));
+    }
+    if (typeof product.images === 'string') {
+      try { product.images = JSON.parse(product.images); } catch { product.images = []; }
+    }
+    return product;
+  }
+
   async findAll(query: {
     page?: number;
     limit?: number;
@@ -63,7 +74,7 @@ export class ProductsService {
     ]);
 
     return {
-      data: products,
+      data: this.transform(products),
       total,
       page,
       limit,
@@ -85,7 +96,7 @@ export class ProductsService {
     });
 
     if (!product) throw new NotFoundException('Product not found');
-    return product;
+    return this.transform(product);
   }
 
   async findBySlug(slug: string) {
@@ -102,7 +113,7 @@ export class ProductsService {
     });
 
     if (!product) throw new NotFoundException('Product not found');
-    return product;
+    return this.transform(product);
   }
 
   async create(dto: CreateProductDto) {
@@ -112,7 +123,7 @@ export class ProductsService {
       data.images = typeof dto.images === 'string' ? dto.images : JSON.stringify(dto.images);
     }
 
-    return this.prisma.product.create({ data });
+    return this.transform(this.prisma.product.create({ data }));
   }
 
   async update(id: number, dto: UpdateProductDto) {
@@ -123,7 +134,7 @@ export class ProductsService {
       data.images = typeof dto.images === 'string' ? dto.images : JSON.stringify(dto.images);
     }
 
-    return this.prisma.product.update({ where: { id }, data });
+    return this.transform(this.prisma.product.update({ where: { id }, data }));
   }
 
   async remove(id: number) {

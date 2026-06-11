@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CartProvider } from "@/context/CartContext";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,8 +19,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fa" dir="rtl">
-      <body style={{ background: 'var(--dk-bg)', color: 'var(--dk-text)' }}>
-        <CartProvider>{children}</CartProvider>
+      <body className="pb-14 md:pb-0" style={{ background: 'var(--dk-bg)', color: 'var(--dk-text)' }}>
+        <CartProvider>
+          {children}
+          <MobileBottomNav />
+        </CartProvider>
       </body>
     </html>
   );

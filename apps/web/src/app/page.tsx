@@ -12,12 +12,8 @@ interface Product {
   category?: { id: number; name: string };
 }
 interface Category { id: number; name: string; slug: string }
-
-const slides = [
-  { bg: 'from-[#ef4056] to-[#d8364a]', title: 'فروش ویژه بهاره', desc: 'تخفیف تا ۵۰٪ روی هزاران محصول' },
-  { bg: 'from-[#19bfd3] to-[#1599a8]', title: 'محصولات دیجیتال', desc: 'جدیدترین گوشی‌ها و لپ‌تاپ‌ها با بهترین قیمت' },
-  { bg: 'from-[#f9a825] to-[#e8960c]', title: 'مد و پوشاک', desc: 'جدیدترین مدل‌های بهاره و تابستانه' },
-];
+interface Slide { bg: string; title: string; desc: string }
+interface Section { type: string; title: string; sort: string; count: number; categoryId?: number }
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -25,27 +21,51 @@ export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [slideIdx, setSlideIdx] = useState(0);
+  const [slides, setSlides] = useState<Slide[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [sectionProducts, setSectionProducts] = useState<Record<number, Product[]>>({});
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setSlideIdx((prev) => (prev + 1) % slides.length);
+      setSlideIdx((prev) => {
+        if (slides.length === 0) return 0;
+        return (prev + 1) % slides.length;
+      });
     }, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [slides.length]);
 
   useEffect(() => {
     Promise.all([
       api.get<{ data: Product[] }>('/products?sort=newest&take=12'),
       api.get<{ data: Product[] }>('/products?sort=newest&take=8'),
       api.get<{ id: number; name: string; slug: string }[]>('/categories'),
+      api.get<{ slides: Slide[]; sections: Section[] }>('/settings/public'),
     ])
-      .then(([prodRes, amaRes, cats]) => {
+      .then(([prodRes, amaRes, cats, settings]) => {
         setProducts(prodRes.data);
         setAmazing(amaRes.data);
         setCategories(cats);
+        setSlides(settings.slides || []);
+        setSections(settings.sections || []);
       })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (sections.length === 0) return;
+    Promise.all(
+      sections.map((sec, i) => {
+        let url = `/products?sort=${sec.sort}&take=${sec.count}`;
+        if (sec.type === 'category' && sec.categoryId) url += `&categoryId=${sec.categoryId}`;
+        return api.get<{ data: Product[] }>(url).then((res) => ({ i, products: res.data }));
+      })
+    ).then((results) => {
+      const map: Record<number, Product[]> = {};
+      results.forEach((r) => (map[r.i] = r.products));
+      setSectionProducts(map);
+    });
+  }, [sections]);
 
   const catIcons = ['📱', '👗', '🖥️', '🏠', '📚', '🎮', '⚽', '🩺'];
 
@@ -54,34 +74,36 @@ export default function HomePage() {
       <Header />
 
       {/* Hero Banner */}
-      <section className="dk-container pt-4">
-        <div className="relative rounded-2xl overflow-hidden h-[340px]">
-          {slides.map((slide, i) => (
-            <div
-              key={i}
-              className={`absolute inset-0 bg-gradient-to-br ${slide.bg} flex items-center px-12 transition-opacity duration-500 ${i === slideIdx ? 'opacity-100' : 'opacity-0'}`}
-            >
-              <div className="text-white">
-                <h2 className="text-3xl font-bold mb-3">{slide.title}</h2>
-                <p className="text-white/80 mb-6">{slide.desc}</p>
-                <Link href="/products" className="inline-block bg-white/20 backdrop-blur-sm rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-white/30 transition">
-                  مشاهده محصولات
-                </Link>
-              </div>
-            </div>
-          ))}
-          {/* Dots */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-            {slides.map((_, i) => (
-              <button
+      {slides.length > 0 && (
+        <section className="dk-container pt-4">
+          <div className="relative rounded-2xl overflow-hidden h-[340px]">
+            {slides.map((slide, i) => (
+              <div
                 key={i}
-                onClick={() => setSlideIdx(i)}
-                className={`w-2.5 h-2.5 rounded-full transition-all ${i === slideIdx ? 'bg-white w-8' : 'bg-white/50'}`}
-              />
+                className={`absolute inset-0 bg-gradient-to-br ${slide.bg} flex items-center px-12 transition-opacity duration-500 ${i === slideIdx ? 'opacity-100' : 'opacity-0'}`}
+              >
+                <div className="text-white">
+                  <h2 className="text-3xl font-bold mb-3">{slide.title}</h2>
+                  <p className="text-white/80 mb-6">{slide.desc}</p>
+                  <Link href="/products" className="inline-block bg-white/20 backdrop-blur-sm rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-white/30 transition">
+                    مشاهده محصولات
+                  </Link>
+                </div>
+              </div>
             ))}
+            {/* Dots */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+              {slides.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSlideIdx(i)}
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${i === slideIdx ? 'bg-white w-8' : 'bg-white/50'}`}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Category Icons */}
       {categories.length > 0 && (
@@ -147,37 +169,35 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Products Grid */}
-      <section className="dk-container pb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-[var(--dk-text)]">جدیدترین محصولات</h3>
-          <Link href="/products" className="text-sm" style={{ color: 'var(--dk-primary)' }}>
-            مشاهده همه
-          </Link>
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {[1,2,3,4,5,6].map((n) => (
-              <div key={n} className="dk-card p-3 animate-pulse">
-                <div className="aspect-square rounded-lg bg-[var(--dk-bg)] mb-3" />
-                <div className="h-3 bg-[var(--dk-bg)] rounded w-3/4 mb-2" />
-                <div className="h-3 bg-[var(--dk-bg)] rounded w-1/2" />
-              </div>
-            ))}
+      {/* Dynamic Sections */}
+      {sections.map((sec, i) => (
+        <section key={i} className="dk-container pb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-[var(--dk-text)]">{sec.title || 'جدیدترین محصولات'}</h3>
+            <Link href="/products" className="text-sm" style={{ color: 'var(--dk-primary)' }}>
+              مشاهده همه
+            </Link>
           </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
 
-        {!loading && products.length === 0 && (
-          <p className="text-center text-[var(--dk-text-light)] py-12">هیچ محصولی یافت نشد.</p>
-        )}
-      </section>
+          {!sectionProducts[i] ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {[1,2,3,4,5,6].map((n) => (
+                <div key={n} className="dk-card p-3 animate-pulse">
+                  <div className="aspect-square rounded-lg bg-[var(--dk-bg)] mb-3" />
+                  <div className="h-3 bg-[var(--dk-bg)] rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-[var(--dk-bg)] rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {sectionProducts[i].map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
+        </section>
+      ))}
 
       {/* Footer */}
       <footer className="bg-white border-t border-[var(--dk-border)] py-8 mt-4">
