@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { api } from '@/lib/api';
-import JalaliDate from '@/components/JalaliDate';
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+import JalaliDate from "@/components/JalaliDate";
 
 interface Shop {
   id: number;
@@ -20,7 +20,8 @@ export default function ShopsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<Shop[]>('/shops')
+    api
+      .get<Shop[]>("/shops")
       .then(setShops)
       .finally(() => setLoading(false));
   }, []);
@@ -28,7 +29,9 @@ export default function ShopsPage() {
   const handleToggle = async (id: number, isActive: boolean) => {
     try {
       await api.put(`/shops/${id}`, { isActive: !isActive });
-      setShops(shops.map((s) => (s.id === id ? { ...s, isActive: !s.isActive } : s)));
+      setShops(
+        shops.map((s) => (s.id === id ? { ...s, isActive: !s.isActive } : s)),
+      );
     } catch (err) {
       alert(err);
     }
@@ -61,17 +64,26 @@ export default function ShopsPage() {
             </thead>
             <tbody>
               {shops.map((shop) => (
-                <tr key={shop.id} className="border-b last:border-0 hover:bg-gray-50">
+                <tr
+                  key={shop.id}
+                  className="border-b last:border-0 hover:bg-gray-50"
+                >
                   <td className="px-4 py-3">{shop.id}</td>
                   <td className="px-4 py-3 font-medium">{shop.name}</td>
-                  <td className="px-4 py-3 text-gray-500">{shop.owner?.name || shop.owner?.email}</td>
+                  <td className="px-4 py-3 text-gray-500">
+                    {shop.owner?.name || shop.owner?.email}
+                  </td>
                   <td className="px-4 py-3">{shop._count.products}</td>
                   <td className="px-4 py-3">{shop._count.orders}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${
-                      shop.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                      {shop.isActive ? 'فعال' : 'مسدود'}
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${
+                        shop.isActive
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {shop.isActive ? "فعال" : "مسدود"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500">
@@ -80,9 +92,9 @@ export default function ShopsPage() {
                   <td className="px-4 py-3">
                     <button
                       onClick={() => handleToggle(shop.id, shop.isActive)}
-                      className={`text-xs ${shop.isActive ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'}`}
+                      className={`text-xs ${shop.isActive ? "text-red-500 hover:text-red-700" : "text-green-500 hover:text-green-700"}`}
                     >
-                      {shop.isActive ? 'مسدود کردن' : 'فعال کردن'}
+                      {shop.isActive ? "مسدود کردن" : "فعال کردن"}
                     </button>
                   </td>
                 </tr>

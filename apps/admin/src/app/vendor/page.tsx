@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { api } from '@/lib/api';
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
 interface VendorStats {
   totalProducts: number;
@@ -15,7 +15,8 @@ export default function VendorDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<VendorStats>('/shops/my')
+    api
+      .get<VendorStats>("/shops/my")
       .then(setStats)
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -31,7 +32,10 @@ export default function VendorDashboard() {
         <button
           onClick={async () => {
             try {
-              await api.post('/shops', { name: 'فروشگاه من', slug: 'my-shop-' + Date.now() });
+              await api.post("/shops", {
+                name: "فروشگاه من",
+                slug: "my-shop-" + Date.now(),
+              });
               window.location.reload();
             } catch (err) {
               alert(err);
@@ -51,23 +55,31 @@ export default function VendorDashboard() {
 
       <div className="rounded-xl bg-white p-6 shadow-sm border mb-6">
         <h3 className="font-semibold mb-2">فروشگاه: {stats.shop.name}</h3>
-        <p className={`text-sm ${stats.shop.isActive ? 'text-green-600' : 'text-red-500'}`}>
-          {stats.shop.isActive ? 'فعال' : 'غیرفعال'}
+        <p
+          className={`text-sm ${stats.shop.isActive ? "text-green-600" : "text-red-500"}`}
+        >
+          {stats.shop.isActive ? "فعال" : "غیرفعال"}
         </p>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div className="rounded-xl bg-white p-4 shadow-sm border">
           <p className="text-sm text-gray-500">محصولات</p>
-          <p className="text-2xl font-bold text-indigo-600 mt-1">{stats.totalProducts}</p>
+          <p className="text-2xl font-bold text-indigo-600 mt-1">
+            {stats.totalProducts}
+          </p>
         </div>
         <div className="rounded-xl bg-white p-4 shadow-sm border">
           <p className="text-sm text-gray-500">سفارشات</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{stats.totalOrders}</p>
+          <p className="text-2xl font-bold text-green-600 mt-1">
+            {stats.totalOrders}
+          </p>
         </div>
         <div className="rounded-xl bg-white p-4 shadow-sm border">
           <p className="text-sm text-gray-500">درآمد</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{stats.totalRevenue.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-blue-600 mt-1">
+            {stats.totalRevenue.toLocaleString()}
+          </p>
         </div>
       </div>
     </div>

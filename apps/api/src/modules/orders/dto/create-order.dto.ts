@@ -1,11 +1,25 @@
-import { IsArray, IsInt, IsOptional, IsString, Min, ArrayMinSize, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsArray,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsBoolean,
+  Min,
+  ArrayMinSize,
+  ValidateNested,
+} from "class-validator";
+import { Type } from "class-transformer";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class OrderItemDto {
   @ApiProperty({ example: 1 })
   @IsInt()
   productId: number;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @IsInt()
+  variantId?: number;
 
   @ApiProperty({ example: 2 })
   @IsInt()
@@ -40,10 +54,24 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({ default: "zarinpal" })
+  @IsOptional()
+  @IsString()
+  paymentMethod?: string;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  useWallet?: boolean;
+
+  @ApiProperty()
+  @IsBoolean()
+  agreedToTerms: boolean;
 }
 
 export class UpdateOrderStatusDto {
-  @ApiProperty({ example: 'processing' })
+  @ApiProperty({ example: "processing" })
   @IsString()
   status: string;
 

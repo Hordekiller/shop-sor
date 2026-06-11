@@ -1,6 +1,14 @@
 {
   "name": "atlas-shop",
+  "version": "0.2.0",
   "private": true,
+  "description": "پلتفرم فروشگاهی مدرن و کامل با NestJS، Next.js و Turborepo",
+  "license": "MIT",
+  "author": "فروشگاه اطلس",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Hordekiller/shop-sor.git"
+  },
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",

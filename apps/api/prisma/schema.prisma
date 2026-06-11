@@ -3,21 +3,151 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ── Enums ─────────────────────────────────
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum ProductType {
+  SIMPLE
+  VARIABLE
+  DIGITAL
+}
+
+enum ProductStatus {
+  IN_STOCK
+  OUT_OF_STOCK
+  PRE_ORDER
+}
+
+enum ProductPublishStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum OrderPaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+  FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum ReturnRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum ReturnRequestReason {
+  DEFECTIVE
+  WRONG_ITEM
+  NOT_AS_DESCRIBED
+  OTHER
+}
+
+enum VendorOrderStatus {
+  PENDING
+  PAID
+  SETTLED
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+enum WalletTransactionType {
+  DEPOSIT
+  WITHDRAW
+  WITHDRAWAL
+  REFUND
+  BONUS
+  PAYMENT
+  ADMIN_ADJUST
+}
+
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+}
+
+enum MenuLocation {
+  HEADER
+  FOOTER
+  MEGA_MENU
+}
+
+enum CouponType {
+  PERCENT
+  FIXED
+}
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum PageType {
+  LANDING
+  BLOG_POST
+  SHOP_LANDING
+  CATEGORY_PAGE
+  CUSTOM
+}
+
+enum PopupType {
+  CENTER
+  BOTTOM_SHEET
+  TOP_BANNER
+}
+
+enum PopupDisplayMode {
+  ONCE
+  EACH_VISIT
+  DAILY
+}
+
+// ── Models ────────────────────────────────
 
 model User {
   id        Int      @id @default(autoincrement())
   name      String
   email     String   @unique
   phone     String?  @unique
+  nationalId String?
+  birthDate String?
   password  String
-  role      String   @default("CUSTOMER")
+  role      UserRole @default(CUSTOMER)
   avatar    String?
   isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
 
   orders    Order[]
   reviews   Review[]
@@ -29,7 +159,15 @@ model User {
   couponUsages   CouponUsage[]
   reviewLikes    ReviewLike[]
   wallet    Wallet?
-  cartItems CartItem[]
+  cartItems  CartItem[]
+  mediaFiles MediaFile[]
+  blogPosts  BlogPost[]
+  blogComments BlogComment[]
+  notifications Notification[]
+  stockAlerts   StockAlert[]
+  savedItems    SavedItem[]
+  pageRevisions PageRevision[]
+  returnRequests ReturnRequest[]
 }
 
 model Shop {
@@ -42,8 +180,8 @@ model Shop {
   isActive    Boolean  @default(false)
   commission  Float    @default(10.0)
   ownerId     Int      @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
 
   owner        User           @relation(fields: [ownerId], references: [id])
   products     Product[]
@@ -56,9 +194,11 @@ model Brand {
   slug        String   @unique
   description String?
   logo        String?
+  metaTitle   String?
+  metaDesc    String?
   isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
 
   products    Product[]
 
@@ -71,15 +211,18 @@ model Category {
   slug        String   @unique
   description String?
   image       String?
+  metaTitle   String?
+  metaDesc    String?
   parentId    Int?
   sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
 
   parent    Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children  Category[]        @relation("CategoryHierarchy")
-  mainProducts Product[]      @relation("ProductMainCategory")
-  products  ProductCategory[]
+  mainProducts      Product[]               @relation("ProductMainCategory")
+  products          ProductCategory[]
+  megaMenuConfig    MegaMenuCategoryConfig?
 }
 
 model Product {
@@ -88,36 +231,39 @@ model Product {
   slug        String   @unique
   shortDescription String?
   description String?
-  price       Float    @default(0)
-  salePrice   Float?
+  price       Decimal  @default(0) @db.Decimal(12, 0)
+  salePrice   Decimal? @db.Decimal(12, 0)
   discountPercent Float?
-  discountStartAt DateTime?
-  discountEndAt   DateTime?
+  discountStartAt DateTime? @db.Timestamptz
+  discountEndAt   DateTime? @db.Timestamptz
+  viewCount       Int      @default(0)
   sku         String?  @unique
   barcode     String?  @unique
   stock       Int      @default(0)
   lowStockThreshold Int @default(10)
   minOrderQty Int      @default(1)
   maxOrderQty Int      @default(0)
-  type        String   @default("simple")
-  status      String   @default("in_stock")
+  type        ProductType @default(SIMPLE)
+  status      ProductStatus @default(IN_STOCK)
   isActive    Boolean  @default(true)
   weight      Float?
   length      Float?
   width       Float?
   height      Float?
   filePath    String?
-  images      String   @default("[]")
+  images      Json     @default("[]")
   videoUrl    String?
-  tags        String   @default("[]")
-  attributes  String   @default("{}")
+  tags        Json     @default("[]")
+  attributes  Json     @default("{}")
+  publishStatus ProductPublishStatus @default(PUBLISHED)
+  relatedProductIds Json @default("[]")
   metaTitle   String?
   metaDesc    String?
   averageRating Float  @default(0)
   numReviews    Int    @default(0)
   numExpertReviews Int @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
 
   categoryId  Int
   brandId     Int?
@@ -134,6 +280,8 @@ model Product {
   wishlist       Wishlist[]
   cartItems      CartItem[]
   specifications ProductSpecification[]
+  stockAlerts    StockAlert[]
+  savedItems     SavedItem[]
 }
 
 model ProductCategory {
@@ -163,20 +311,23 @@ model ProductSpecification {
 model Order {
   id              Int      @id @default(autoincrement())
   orderNumber     String   @unique
-  subtotal        Float
-  shippingCost    Float    @default(0)
-  discount        Float    @default(0)
-  total           Float
-  status          String   @default("pending")
-  paymentStatus   String   @default("unpaid")
+  subtotal        Decimal  @db.Decimal(12, 0)
+  shippingCost    Decimal  @default(0) @db.Decimal(12, 0)
+  taxAmount       Decimal  @default(0) @db.Decimal(12, 0)
+  discount        Decimal  @default(0) @db.Decimal(12, 0)
+  total           Decimal  @db.Decimal(12, 0)
+  status          OrderStatus @default(PENDING)
+  paymentStatus   OrderPaymentStatus @default(UNPAID)
   paymentMethod   String?
   shippingMethod  String?
+  trackingCode    String?
   notes           String?
-  paidAt          DateTime?
+  paidAt          DateTime? @db.Timestamptz
+  deliveredAt     DateTime? @db.Timestamptz
   shippingAddress String?
   addressId   Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
 
   userId       Int
   user         User          @relation(fields: [userId], references: [id])
@@ -187,13 +338,35 @@ model Order {
   stockMovements StockMovement[]
   reviews      Review[]
   couponUsages CouponUsage[]
+  returnRequests ReturnRequest[]
+}
+
+model ReturnRequest {
+  id          Int      @id @default(autoincrement())
+  orderId     Int
+  userId      Int
+  reason      ReturnRequestReason
+  description String?
+  status      ReturnRequestStatus @default(PENDING)
+  items       Json
+  refundAmount Decimal? @db.Decimal(12, 0)
+  adminNote   String?
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+
+  order Order @relation(fields: [orderId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@index([orderId])
+  @@index([userId])
+  @@map("return_requests")
 }
 
 model OrderItem {
   id        Int     @id @default(autoincrement())
   quantity  Int     @default(1)
-  price     Float
-  total     Float
+  price     Decimal @db.Decimal(12, 0)
+  total     Decimal @db.Decimal(12, 0)
   variantName String?
 
   orderId   Int
@@ -210,13 +383,13 @@ model ProductVariant {
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   name       String
   sku        String?  @unique
-  price      Float?
+  price      Decimal? @db.Decimal(12, 0)
   stock      Int      @default(0)
-  attributes String   @default("{}")
-  images     String   @default("[]")
+  attributes Json     @default("{}")
+  images     Json     @default("[]")
   isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now()) @db.Timestamptz
+  updatedAt  DateTime @updatedAt @db.Timestamptz
 
   orderItems    OrderItem[]
   stockMovements StockMovement[]
@@ -224,14 +397,14 @@ model ProductVariant {
 
 model Payment {
   id          Int      @id @default(autoincrement())
-  amount      Float
+  amount      Decimal  @db.Decimal(12, 0)
   authority   String?
   referenceId String?
-  status      String   @default("pending")
+  status      PaymentStatus @default(PENDING)
   gateway     String?
-  paidAt      DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  paidAt      DateTime? @db.Timestamptz
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
 
   orderId Int
   order   Order @relation(fields: [orderId], references: [id])
@@ -249,8 +422,8 @@ model Review {
   isExpert   Boolean  @default(false)
   expertName String?
   likes      Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now()) @db.Timestamptz
+  updatedAt  DateTime @updatedAt @db.Timestamptz
 
   userId    Int
   productId Int
@@ -273,6 +446,34 @@ model ReviewMedia {
   review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 }
 
+model MediaFile {
+  id           Int      @id @default(autoincrement())
+  url          String
+  filename     String
+  originalName String
+  mimetype     String
+  size         Int
+  width        Int?
+  height       Int?
+  format       String?
+  thumbnailUrl String?
+  smallUrl     String?
+  mediumUrl    String?
+  largeUrl     String?
+  xlargeUrl    String?
+  sourceType   String   @default("admin")
+  uploadedById Int?
+  attachedTo   String?
+  alt          String?
+  caption      String?
+  isApproved   Boolean  @default(true)
+  createdAt    DateTime @default(now()) @db.Timestamptz
+  updatedAt    DateTime @updatedAt @db.Timestamptz
+
+  uploader User?  @relation(fields: [uploadedById], references: [id])
+  fonts    Font[]
+}
+
 model ReviewLike {
   id       Int @id @default(autoincrement())
   userId   Int
@@ -287,7 +488,7 @@ model Wishlist {
   id        Int      @id @default(autoincrement())
   userId    Int
   productId Int
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -306,7 +507,7 @@ model Address {
   postalCode   String
   addressText  String
   isDefault    Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  createdAt    DateTime @default(now()) @db.Timestamptz
 
   user User @relation(fields: [userId], references: [id])
   orders Order[]
@@ -315,19 +516,20 @@ model Address {
 model Coupon {
   id        Int      @id @default(autoincrement())
   code      String   @unique
-  type      String   @default("percent")
-  value     Float
-  minOrder  Float    @default(0)
+  type      CouponType @default(PERCENT)
+  value     Decimal  @db.Decimal(12, 0)
+  minOrder  Decimal  @default(0) @db.Decimal(12, 0)
   maxUses   Int?
-  maxUsesPerUser Int @default(1)
+  maxUsesPerUser Int      @default(1)
+  maxDiscountAmount Decimal? @db.Decimal(12, 0)
   usedCount Int      @default(0)
-  totalDiscount Float @default(0)
-  startsAt  DateTime?
-  expiresAt DateTime?
+  totalDiscount Decimal @default(0) @db.Decimal(12, 0)
+  startsAt  DateTime? @db.Timestamptz
+  expiresAt DateTime? @db.Timestamptz
   isActive  Boolean  @default(true)
-  applicableProducts String @default("[]")
-  applicableCategories String @default("[]")
-  createdAt DateTime @default(now())
+  applicableProducts Json @default("[]")
+  applicableCategories Json @default("[]")
+  createdAt DateTime @default(now()) @db.Timestamptz
 
   userId    Int?
   user      User?          @relation(fields: [userId], references: [id])
@@ -339,8 +541,8 @@ model CouponUsage {
   couponId Int
   userId   Int
   orderId  Int
-  discount Float    @default(0)
-  usedAt   DateTime @default(now())
+  discount Decimal  @default(0) @db.Decimal(12, 0)
+  usedAt   DateTime @default(now()) @db.Timestamptz
 
   coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id])
@@ -351,17 +553,34 @@ model CouponUsage {
 
 model VendorOrder {
   id        Int      @id @default(autoincrement())
-  amount    Float
-  commission Float
-  netAmount Float
-  status    String   @default("pending")
-  settledAt DateTime?
-  createdAt DateTime @default(now())
+  amount    Decimal  @db.Decimal(12, 0)
+  commission Decimal @db.Decimal(12, 0)
+  netAmount Decimal  @db.Decimal(12, 0)
+  status    VendorOrderStatus @default(PENDING)
+  settledAt DateTime? @db.Timestamptz
+  createdAt DateTime @default(now()) @db.Timestamptz
 
   shopId  Int
   orderId Int
   shop    Shop  @relation(fields: [shopId], references: [id])
   order   Order @relation(fields: [orderId], references: [id])
+}
+
+model ShippingMethod {
+  id             Int      @id @default(autoincrement())
+  name           String
+  slug           String   @unique
+  description    String?
+  basePrice      Decimal  @default(0) @db.Decimal(12, 0)
+  freeThreshold  Decimal  @default(0) @db.Decimal(12, 0)
+  estimatedDays  String?
+  weightCost     Decimal  @default(0) @db.Decimal(12, 0)
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now()) @db.Timestamptz
+  updatedAt      DateTime @updatedAt @db.Timestamptz
+
+  @@map("shipping_methods")
 }
 
 model SiteConfig {
@@ -379,8 +598,75 @@ model SiteSlide {
   link        String?
   sortOrder   Int      @default(0)
   isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+}
+
+model Menu {
+  id        Int      @id @default(autoincrement())
+  name      String
+  location  MenuLocation @default(HEADER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  items         MenuItem[]
+  megaMenuConfig MegaMenuConfig?
+
+  @@map("menus")
+}
+
+model MenuItem {
+  id        Int       @id @default(autoincrement())
+  menuId    Int
+  menu      Menu      @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  parentId  Int?
+  parent    MenuItem? @relation("MenuItemHierarchy", fields: [parentId], references: [id])
+  children  MenuItem[] @relation("MenuItemHierarchy")
+  title     String
+  linkType  String    @default("custom_url")
+  linkValue String    @default("")
+  icon      String?
+  image     String?
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now()) @db.Timestamptz
+
+  @@map("menu_items")
+}
+
+model PageSection {
+  id        Int      @id @default(autoincrement())
+  type      String   @default("carousel_style_1")
+  title     String?
+  subtitle  String?
+  sortOrder Int      @default(0)
+  settings  Json     @default("{}")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  blocks    SectionBlock[]
+
+  @@map("page_sections")
+}
+
+model SectionBlock {
+  id         Int          @id @default(autoincrement())
+  sectionId  Int
+  section    PageSection  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  title      String?
+  subtitle   String?
+  image      String?
+  videoUrl   String?
+  link       String?
+  badge      String?
+  badgeColor String?
+  sortOrder  Int          @default(0)
+  settings   Json         @default("{}")
+  createdAt  DateTime     @default(now()) @db.Timestamptz
+
+  @@map("section_blocks")
 }
 
 model ProductAttribute {
@@ -388,8 +674,8 @@ model ProductAttribute {
   productId Int
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   name      String
-  values    String   @default("[]")
-  createdAt DateTime @default(now())
+  values    Json     @default("[]")
+  createdAt DateTime @default(now()) @db.Timestamptz
 
   @@map("product_attributes")
 }
@@ -412,18 +698,21 @@ model ShopSettings {
   smsProvider      String?
   smsApiKey        String?
   orderSmsTemplate String?
-  minOrderAmount   Float  @default(0)
-  taxPercent       Float  @default(0)
-  updatedAt        DateTime @updatedAt
+  minOrderAmount   Decimal  @default(0) @db.Decimal(12, 0)
+  taxPercent       Float    @default(0)
+  walletBonusPercent Float  @default(0)
+  walletBonusFromDate DateTime? @db.Timestamptz
+  walletBonusToDate   DateTime? @db.Timestamptz
+  updatedAt        DateTime @updatedAt @db.Timestamptz
 }
 
 model StockMovement {
   id        Int     @id @default(autoincrement())
-  type      String  @default("IN")
+  type      StockMovementType @default(IN)
   quantity  Int
   reason    String?
   stockAfter Int?
-  createdAt DateTime          @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz
 
   productId Int
   variantId Int?
@@ -438,9 +727,9 @@ model StockMovement {
 
 model Wallet {
   id        Int      @id @default(autoincrement())
-  balance   Float    @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  balance   Decimal  @default(0) @db.Decimal(12, 0)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
 
   userId       Int                @unique
   user         User               @relation(fields: [userId], references: [id])
@@ -449,36 +738,297 @@ model Wallet {
 
 model WalletTransaction {
   id          Int      @id @default(autoincrement())
-  amount      Float
-  type        String   @default("DEPOSIT")
+  amount      Decimal  @db.Decimal(12, 0)
+  type        WalletTransactionType @default(DEPOSIT)
   description String?
   refType     String?
   refId       Int?
-  balanceAfter Float?
-  createdAt   DateTime @default(now())
+  balanceAfter Decimal? @db.Decimal(12, 0)
+  createdAt   DateTime @default(now()) @db.Timestamptz
 
   walletId Int
   wallet   Wallet @relation(fields: [walletId], references: [id])
 }
 
 model Page {
+  id          Int        @id @default(autoincrement())
+  title       String
+  slug        String     @unique
+  type        PageType   @default(LANDING)
+  status      PageStatus @default(DRAFT)
+  content     String?
+  contentJson Json?
+  metaTitle   String?
+  metaDesc    String?
+  isActive    Boolean    @default(true)
+  publishAt   DateTime?  @db.Timestamptz
+  unpublishAt DateTime?  @db.Timestamptz
+  sortOrder   Int        @default(0)
+  createdAt   DateTime   @default(now()) @db.Timestamptz
+  updatedAt   DateTime   @updatedAt @db.Timestamptz
+
+  revisions   PageRevision[]
+}
+
+model PageRevision {
+  id           Int      @id @default(autoincrement())
+  pageId       Int
+  title        String
+  contentJson  String
+  authorId     Int?
+  note         String?
+  createdAt    DateTime @default(now()) @db.Timestamptz
+  page         Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  author       User?    @relation(fields: [authorId], references: [id])
+
+  @@index([pageId, createdAt])
+  @@map("page_revisions")
+}
+
+model Font {
+  id         Int      @id @default(autoincrement())
+  name       String
+  source     String   @default("link")
+  url        String?
+  mediaId    Int?
+  filepath   String?
+  weights    String   @default("400")
+  subsets    String?
+  isActive   Boolean  @default(true)
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now()) @db.Timestamptz
+  updatedAt  DateTime @updatedAt @db.Timestamptz
+
+  media      MediaFile? @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+
+  @@map("fonts")
+}
+
+model Redirect {
   id        Int      @id @default(autoincrement())
-  title     String
-  slug      String   @unique
-  content   String?
-  metaTitle String?
-  metaDesc  String?
+  source    String   @unique
+  target    String
+  type      Int      @default(301)
   isActive  Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  @@map("redirects")
+}
+
+model Otp {
+  id        Int      @id @default(autoincrement())
+  phone     String
+  code      String
+  expiresAt DateTime @db.Timestamptz
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  @@index([phone, code])
+  @@map("otps")
+}
+
+// ─── Blog ─────────────────────────────────
+
+model BlogPost {
+  id            Int      @id @default(autoincrement())
+  title         String
+  slug          String   @unique
+  content       String?
+  excerpt       String?
+  featuredImage String?
+  status        BlogPostStatus @default(DRAFT)
+  publishedAt   DateTime? @db.Timestamptz
+  viewCount     Int      @default(0)
+  metaTitle     String?
+  metaDesc      String?
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  updatedAt     DateTime @updatedAt @db.Timestamptz
+
+  authorId Int
+  author   User  @relation(fields: [authorId], references: [id])
+
+  categories   BlogPostCategory[]
+  tags         BlogPostTag[]
+  comments     BlogComment[]
+
+  @@map("blog_posts")
+}
+
+model BlogCategory {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String   @unique
+  description String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+
+  parentId  Int?
+  parent    BlogCategory?   @relation("BlogCategoryHierarchy", fields: [parentId], references: [id])
+  children  BlogCategory[]  @relation("BlogCategoryHierarchy")
+  posts     BlogPostCategory[]
+
+  @@map("blog_categories")
+}
+
+model BlogTag {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  slug  String @unique
+  posts BlogPostTag[]
+
+  @@map("blog_tags")
+}
+
+model BlogPostCategory {
+  postId     Int
+  categoryId Int
+
+  post     BlogPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  category BlogCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([postId, categoryId])
+  @@map("blog_post_categories")
+}
+
+model BlogPostTag {
+  postId Int
+  tagId  Int
+
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  BlogTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("blog_post_tags")
+}
+
+model BlogComment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  name      String?
+  email     String?
+  website   String?
+  isApproved Boolean @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  parentId Int?
+  parent   BlogComment?  @relation("BlogCommentHierarchy", fields: [parentId], references: [id])
+  replies  BlogComment[] @relation("BlogCommentHierarchy")
+
+  postId Int
+  post   BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  userId Int?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  @@map("blog_comments")
+}
+
+model MegaMenuConfig {
+  id             Int     @id @default(autoincrement())
+  menuId         Int?    @unique
+  showCategories Boolean @default(true)
+  showBrands     Boolean @default(true)
+  tabs           Json    @default("[\"categories\",\"brands\"]")
+  sidebarTitle   String? @default("ویژه")
+  sidebarLinks   Json    @default("[]")
+  sidebarBanner  String?
+  sidebarBannerLink String?
+  sidebarBannerSize String? @default("300×400")
+  updatedAt      DateTime @updatedAt @db.Timestamptz
+
+  menu Menu? @relation(fields: [menuId], references: [id])
+
+  @@map("mega_menu_config")
+}
+
+model MegaMenuCategoryConfig {
+  id          Int     @id @default(autoincrement())
+  categoryId  Int     @unique
+  icon        String?
+  iconType    String  @default("iconify")
+  sidebarBanner String?
+  sidebarBannerLink String?
+  sidebarLinks Json    @default("[]")
+
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@map("mega_menu_category_configs")
+}
+
+model Story {
+  id          Int      @id @default(autoincrement())
+  title       String
+  subtitle    String?
+  image       String?
+  videoUrl    String?
+  link        String?
+  bgColor     String   @default("linear-gradient(135deg, #667eea 0%, #764ba2 100%)")
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+
+  @@map("stories")
+}
+
+model Popup {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  image       String?
+  link        String?
+  btnText     String   @default("مشاهده")
+  type        PopupType @default(CENTER)
+  displayMode PopupDisplayMode @default(ONCE)
+  delay       Int      @default(3000)
+  startAt     DateTime? @db.Timestamptz
+  endAt       DateTime? @db.Timestamptz
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+
+  @@map("popups")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String
+  title     String
+  message   String?
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationTemplate {
+  id              Int      @id @default(autoincrement())
+  type            String   @unique
+  titleTemplate   String
+  messageTemplate String?
+  emailSubject    String?
+  emailHtml       String?
+  smsTemplate     String?
+  channels        String   @default("in_app,email")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now()) @db.Timestamptz
+  updatedAt       DateTime @updatedAt @db.Timestamptz
+
+  @@map("notification_templates")
 }
 
 model CartItem {
   id         Int      @id @default(autoincrement())
   quantity   Int      @default(1)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now()) @db.Timestamptz
+  updatedAt  DateTime @updatedAt @db.Timestamptz
 
   userId    Int
   productId Int
@@ -488,4 +1038,34 @@ model CartItem {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId, variantId])
+}
+
+model StockAlert {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  productId Int
+  variantId Int      @default(0)
+  notified  Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId, variantId])
+  @@index([productId, notified])
+  @@map("stock_alerts")
+}
+
+model SavedItem {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  productId Int
+  variantId Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId, variantId])
+  @@map("saved_items")
 }

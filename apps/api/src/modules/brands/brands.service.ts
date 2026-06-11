@@ -1,5 +1,9 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma.service';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from "@nestjs/common";
+import { PrismaService } from "../../common/prisma.service";
 
 @Injectable()
 export class BrandsService {
@@ -9,15 +13,15 @@ export class BrandsService {
     return text
       .trim()
       .toLowerCase()
-      .replace(/[^\w\s\-ًٌٍَُِْآا-ی]/g, '')
-      .replace(/[\s_]+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
+      .replace(/[^\w\s\-ًٌٍَُِْآا-ی]/g, "")
+      .replace(/[\s_]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
   }
 
   async findAll() {
     return this.prisma.brand.findMany({
-      orderBy: { name: 'asc' },
+      orderBy: { name: "asc" },
       include: { _count: { select: { products: true } } },
     });
   }
@@ -27,7 +31,7 @@ export class BrandsService {
       where: { id },
       include: { _count: { select: { products: true } } },
     });
-    if (!brand) throw new NotFoundException('Brand not found');
+    if (!brand) throw new NotFoundException("Brand not found");
     return brand;
   }
 
@@ -36,7 +40,7 @@ export class BrandsService {
       where: { slug },
       include: { _count: { select: { products: true } } },
     });
-    if (!brand) throw new NotFoundException('Brand not found');
+    if (!brand) throw new NotFoundException("Brand not found");
     return brand;
   }
 
@@ -44,14 +48,23 @@ export class BrandsService {
     const slug = this.toSlug(data.name);
 
     const existing = await this.prisma.brand.findUnique({ where: { slug } });
-    if (existing) throw new ConflictException('Brand with this name already exists');
+    if (existing)
+      throw new ConflictException("Brand with this name already exists");
 
     return this.prisma.brand.create({
       data: { ...data, slug },
     });
   }
 
-  async update(id: number, data: { name?: string; description?: string; logo?: string; isActive?: boolean }) {
+  async update(
+    id: number,
+    data: {
+      name?: string;
+      description?: string;
+      logo?: string;
+      isActive?: boolean;
+    },
+  ) {
     await this.findById(id);
 
     if (data.name) {
@@ -59,8 +72,12 @@ export class BrandsService {
       const existing = await this.prisma.brand.findFirst({
         where: { slug, id: { not: id } },
       });
-      if (existing) throw new ConflictException('Brand with this name already exists');
-      return this.prisma.brand.update({ where: { id }, data: { ...data, slug } });
+      if (existing)
+        throw new ConflictException("Brand with this name already exists");
+      return this.prisma.brand.update({
+        where: { id },
+        data: { ...data, slug },
+      });
     }
 
     return this.prisma.brand.update({ where: { id }, data });
@@ -68,7 +85,9 @@ export class BrandsService {
 
   async remove(id: number) {
     await this.findById(id);
-    const productCount = await this.prisma.product.count({ where: { brandId: id } });
+    const productCount = await this.prisma.product.count({
+      where: { brandId: id },
+    });
     if (productCount > 0) {
       // Detach brand from products instead of blocking
       await this.prisma.product.updateMany({

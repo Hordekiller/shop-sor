@@ -1,4 +1,4 @@
-export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'VENDOR' | 'CUSTOMER';
+export type Role = "SUPER_ADMIN" | "ADMIN" | "VENDOR" | "CUSTOMER";
 
 export interface User {
   id: number;
@@ -21,7 +21,7 @@ export interface Product {
   salePrice?: number;
   sku?: string;
   stock: number;
-  type: 'simple' | 'variable' | 'digital' | 'external';
+  type: "simple" | "variable" | "digital" | "external";
   isActive: boolean;
   images: string[];
   categoryId: number;
@@ -92,7 +92,7 @@ export interface Review {
 export interface Coupon {
   id: number;
   code: string;
-  type: 'percent' | 'fixed';
+  type: "percent" | "fixed";
   value: number;
   minOrder: number;
   maxUses?: number;
@@ -123,3 +123,5 @@ export interface PaginatedResponse<T> {
   limit: number;
   totalPages: number;
 }
+
+export * from "./page-builder";

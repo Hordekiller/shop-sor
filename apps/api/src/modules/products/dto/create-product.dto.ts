@@ -1,16 +1,28 @@
 import {
-  IsString, IsOptional, IsNumber, IsInt, Min, Max, IsBoolean, IsArray, IsEnum,
-  ValidateNested, MinLength, MaxLength, IsDateString, IsObject,
-} from 'class-validator';
-import { Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsInt,
+  Min,
+  Max,
+  IsBoolean,
+  IsArray,
+  IsEnum,
+  ValidateNested,
+  MinLength,
+  MaxLength,
+  IsDateString,
+  IsObject,
+} from "class-validator";
+import { Type } from "class-transformer";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class ProductImageDto {
-  @ApiProperty({ example: 'uploads/product-1.jpg' })
+  @ApiProperty({ example: "uploads/product-1.jpg" })
   @IsString()
   url: string;
 
-  @ApiPropertyOptional({ example: 'تصویر هدفون بی‌سیم' })
+  @ApiPropertyOptional({ example: "تصویر هدفون بی‌سیم" })
   @IsOptional()
   @IsString()
   @MaxLength(255)
@@ -23,7 +35,7 @@ export class ProductVariantDto {
   @IsInt()
   id?: number;
 
-  @ApiProperty({ example: 'قرمز سایز L' })
+  @ApiProperty({ example: "قرمز سایز L" })
   @IsString()
   @MinLength(1)
   @MaxLength(200)
@@ -68,25 +80,25 @@ export class ProductAttrDefDto {
   @IsInt()
   id?: number;
 
-  @ApiProperty({ example: 'رنگ' })
+  @ApiProperty({ example: "رنگ" })
   @IsString()
   @MinLength(1)
   name: string;
 
-  @ApiProperty({ example: ['قرمز', 'آبی', 'سبز'] })
+  @ApiProperty({ example: ["قرمز", "آبی", "سبز"] })
   @IsArray()
   @IsString({ each: true })
   values: string[];
 }
 
 export class ProductSpecificationDto {
-  @ApiProperty({ example: 'وزن' })
+  @ApiProperty({ example: "وزن" })
   @IsString()
   @MinLength(1)
   @MaxLength(200)
   name: string;
 
-  @ApiProperty({ example: '500 گرم' })
+  @ApiProperty({ example: "500 گرم" })
   @IsString()
   @MinLength(1)
   @MaxLength(500)
@@ -94,19 +106,19 @@ export class ProductSpecificationDto {
 }
 
 export class CreateProductDto {
-  @ApiProperty({ example: 'هدفون بی‌سیم مدل X200' })
+  @ApiProperty({ example: "هدفون بی‌سیم مدل X200" })
   @IsString()
   @MinLength(2)
   @MaxLength(500)
   title: string;
 
-  @ApiPropertyOptional({ example: 'wireless-headphone-x200' })
+  @ApiPropertyOptional({ example: "wireless-headphone-x200" })
   @IsOptional()
   @IsString()
   @MaxLength(500)
   slug?: string;
 
-  @ApiPropertyOptional({ example: 'توضیح کوتاه درباره محصول' })
+  @ApiPropertyOptional({ example: "توضیح کوتاه درباره محصول" })
   @IsOptional()
   @IsString()
   @MaxLength(1000)
@@ -135,12 +147,12 @@ export class CreateProductDto {
   @Max(100)
   discountPercent?: number;
 
-  @ApiPropertyOptional({ example: '2026-06-01T00:00:00.000Z' })
+  @ApiPropertyOptional({ example: "2026-06-01T00:00:00.000Z" })
   @IsOptional()
   @IsDateString()
   discountStartAt?: string;
 
-  @ApiPropertyOptional({ example: '2026-07-01T00:00:00.000Z' })
+  @ApiPropertyOptional({ example: "2026-07-01T00:00:00.000Z" })
   @IsOptional()
   @IsDateString()
   discountEndAt?: string;
@@ -175,18 +187,21 @@ export class CreateProductDto {
   @Min(1)
   minOrderQty?: number;
 
-  @ApiPropertyOptional({ default: 0, description: '0 = unlimited' })
+  @ApiPropertyOptional({ default: 0, description: "0 = unlimited" })
   @IsOptional()
   @IsInt()
   @Min(0)
   maxOrderQty?: number;
 
-  @ApiPropertyOptional({ default: 'simple' })
+  @ApiPropertyOptional({ default: "simple" })
   @IsOptional()
   @IsString()
   type?: string;
 
-  @ApiPropertyOptional({ default: 'in_stock', enum: ['in_stock', 'out_of_stock', 'coming_soon', 'display_only'] })
+  @ApiPropertyOptional({
+    default: "in_stock",
+    enum: ["in_stock", "out_of_stock", "coming_soon", "display_only"],
+  })
   @IsOptional()
   @IsString()
   status?: string;
@@ -220,23 +235,37 @@ export class CreateProductDto {
   @Min(0)
   height?: number;
 
-  @ApiPropertyOptional({ example: 'https://example.com/video.mp4' })
+  @ApiPropertyOptional({ example: "https://example.com/video.mp4" })
   @IsOptional()
   @IsString()
   videoUrl?: string;
 
-  @ApiPropertyOptional({ example: ['پرفروش', 'جدید'] })
+  @ApiPropertyOptional({ example: ["پرفروش", "جدید"] })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
 
-  @ApiPropertyOptional({ example: [{ url: 'image1.jpg', alt: 'توضیح تصویر' }] })
+  @ApiPropertyOptional({ example: [{ url: "image1.jpg", alt: "توضیح تصویر" }] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ProductImageDto)
   images?: ProductImageDto[];
+
+  @ApiPropertyOptional({
+    default: "published",
+    enum: ["draft", "published", "pending_review"],
+  })
+  @IsOptional()
+  @IsString()
+  publishStatus?: string;
+
+  @ApiPropertyOptional({ example: [2, 3] })
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  relatedProductIds?: number[];
 
   @ApiProperty({ example: 1 })
   @IsInt()
@@ -377,7 +406,7 @@ export class UpdateProductDto {
   @Min(1)
   minOrderQty?: number;
 
-  @ApiPropertyOptional({ description: '0 = unlimited' })
+  @ApiPropertyOptional({ description: "0 = unlimited" })
   @IsOptional()
   @IsInt()
   @Min(0)
@@ -388,7 +417,9 @@ export class UpdateProductDto {
   @IsString()
   type?: string;
 
-  @ApiPropertyOptional({ enum: ['in_stock', 'out_of_stock', 'coming_soon', 'display_only'] })
+  @ApiPropertyOptional({
+    enum: ["in_stock", "out_of_stock", "coming_soon", "display_only"],
+  })
   @IsOptional()
   @IsString()
   status?: string;

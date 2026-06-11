@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { api } from '@/lib/api';
-import JalaliDate from '@/components/JalaliDate';
+import { useEffect, useState } from "react";
+import { Icon } from "@iconify/react";
+import { api } from "@/lib/api";
+import JalaliDate from "@/components/JalaliDate";
 
 interface OrderItem {
   id: number;
@@ -10,7 +11,6 @@ interface OrderItem {
   quantity: number;
   price: number;
 }
-
 interface Order {
   id: number;
   orderNumber: string;
@@ -25,34 +25,38 @@ interface Order {
 }
 
 const statusOptions = [
-  { value: '', label: 'همه' },
-  { value: 'pending', label: 'در انتظار' },
-  { value: 'confirmed', label: 'تایید شده' },
-  { value: 'processing', label: 'در حال پردازش' },
-  { value: 'shipped', label: 'ارسال شده' },
-  { value: 'delivered', label: 'تحویل شده' },
-  { value: 'cancelled', label: 'لغو شده' },
+  { value: "", label: "همه" },
+  { value: "pending", label: "در انتظار" },
+  { value: "confirmed", label: "تایید شده" },
+  { value: "processing", label: "در حال پردازش" },
+  { value: "shipped", label: "ارسال شده" },
+  { value: "delivered", label: "تحویل شده" },
+  { value: "cancelled", label: "لغو شده" },
 ];
 
-const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-700',
-  confirmed: 'bg-blue-100 text-blue-700',
-  processing: 'bg-indigo-100 text-indigo-700',
-  shipped: 'bg-purple-100 text-purple-700',
-  delivered: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-700',
+const statusBadge: Record<string, string> = {
+  pending: "v-badge-warning",
+  confirmed: "v-badge-info",
+  processing: "v-badge-primary",
+  shipped: "v-badge-secondary",
+  delivered: "v-badge-success",
+  cancelled: "v-badge-error",
 };
 
 const statusLabels: Record<string, string> = {
-  pending: 'در انتظار', confirmed: 'تایید شده', processing: 'در حال پردازش',
-  shipped: 'ارسال شده', delivered: 'تحویل شده', cancelled: 'لغو شده',
+  pending: "در انتظار",
+  confirmed: "تایید شده",
+  processing: "در حال پردازش",
+  shipped: "ارسال شده",
+  delivered: "تحویل شده",
+  cancelled: "لغو شده",
 };
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState("");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const perPage = 15;
@@ -61,12 +65,13 @@ export default function OrdersPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (statusFilter) params.set('status', statusFilter);
-      if (search) params.set('search', search);
-      params.set('page', String(page));
-      params.set('take', String(perPage));
-
-      const data = await api.get<{ data: Order[]; total: number }>(`/orders/all?${params}`);
+      if (statusFilter) params.set("status", statusFilter);
+      if (search) params.set("search", search);
+      params.set("page", String(page));
+      params.set("take", String(perPage));
+      const data = await api.get<{ data: Order[]; total: number }>(
+        `/orders/all?${params}`,
+      );
       setOrders(data.data);
       setTotal(data.total);
     } catch (err) {
@@ -76,7 +81,9 @@ export default function OrdersPage() {
     }
   };
 
-  useEffect(() => { fetchOrders(); }, [page, statusFilter]);
+  useEffect(() => {
+    fetchOrders();
+  }, [page, statusFilter]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,96 +103,177 @@ export default function OrdersPage() {
   const totalPages = Math.ceil(total / perPage);
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold">سفارشات</h2>
-        <span className="text-sm text-gray-500">مجموع: {total}</span>
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--v-text)" }}>
+            سفارشات
+          </h1>
+          <p
+            className="text-sm mt-1"
+            style={{ color: "var(--v-text-secondary)" }}
+          >
+            مدیریت و پیگیری سفارشات
+          </p>
+        </div>
+        <span
+          className="text-sm px-3 py-1 rounded-lg"
+          style={{
+            background: "rgba(115,103,240,0.08)",
+            color: "var(--v-primary)",
+          }}
+        >
+          مجموع: {total}
+        </span>
       </div>
 
       <div className="flex flex-wrap gap-3 mb-6">
         <form onSubmit={handleSearch} className="flex-1 min-w-[200px]">
-          <input type="text" value={search}
+          <input
+            type="text"
+            value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="جستجوی شماره سفارش یا مشتری..."
-            className="w-full rounded-lg border px-4 py-2 text-sm" />
+            className="v-input"
+          />
         </form>
-
-        <select value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          className="rounded-lg border px-4 py-2 text-sm">
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
+          className="v-select w-auto min-w-[140px]"
+        >
           {statusOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
           ))}
         </select>
       </div>
 
       {loading ? (
-        <p className="text-gray-500">در حال بارگذاری...</p>
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-14 rounded-lg animate-pulse"
+              style={{ background: "var(--v-bg)" }}
+            />
+          ))}
+        </div>
       ) : orders.length === 0 ? (
-        <p className="text-gray-500">هیچ سفارشی یافت نشد.</p>
+        <div className="v-card p-12 text-center">
+          <Icon
+            icon="tabler:shopping-cart-off"
+            className="w-12 h-12 mx-auto mb-3"
+            style={{ color: "var(--v-text-disabled)" }}
+          />
+          <p style={{ color: "var(--v-text-secondary)" }}>
+            هیچ سفارشی یافت نشد.
+          </p>
+        </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-gray-50 text-right">
-              <tr>
-                <th className="px-4 py-3 font-medium">شناسه</th>
-                <th className="px-4 py-3 font-medium">شماره سفارش</th>
-                <th className="px-4 py-3 font-medium">مشتری</th>
-                <th className="px-4 py-3 font-medium">تعداد</th>
-                <th className="px-4 py-3 font-medium">مجموع</th>
-                <th className="px-4 py-3 font-medium">وضعیت</th>
-                <th className="px-4 py-3 font-medium">تاریخ</th>
-                <th className="px-4 py-3 font-medium">عملیات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => (
-                <tr key={order.id} className="border-b last:border-0 hover:bg-gray-50">
-                  <td className="px-4 py-3">{order.id}</td>
-                  <td className="px-4 py-3">
-                    <a href={`/orders/${order.id}`} className="font-medium text-indigo-600 hover:underline">
-                      {order.orderNumber}
-                    </a>
-                  </td>
-                  <td className="px-4 py-3">{order.user?.name || order.user?.email}</td>
-                  <td className="px-4 py-3">{order.items.reduce((s, i) => s + i.quantity, 0)}</td>
-                  <td className="px-4 py-3">{order.total.toLocaleString()}</td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${statusColors[order.status] || 'bg-gray-100 text-gray-500'}`}>
-                      {statusLabels[order.status] || order.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">
-                    <JalaliDate date={order.createdAt} showTime />
-                  </td>
-                  <td className="px-4 py-3">
-                    <select
-                      className="rounded border px-2 py-1 text-xs"
-                      value={order.status}
-                      onChange={(e) => handleStatus(order.id, e.target.value)}
-                    >
-                      {statusOptions.filter((o) => o.value).map(({ value, label }) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                  </td>
+        <div className="v-card p-0 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="v-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>شماره سفارش</th>
+                  <th>مشتری</th>
+                  <th>تعداد</th>
+                  <th>مجموع</th>
+                  <th>وضعیت</th>
+                  <th>تاریخ</th>
+                  <th>عملیات</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {orders.map((order) => (
+                  <tr key={order.id}>
+                    <td>{order.id}</td>
+                    <td>
+                      <a
+                        href={`/orders/${order.id}`}
+                        className="font-medium hover:underline"
+                        style={{ color: "var(--v-primary)" }}
+                      >
+                        {order.orderNumber}
+                      </a>
+                    </td>
+                    <td>{order.user?.name || order.user?.email}</td>
+                    <td>{order.items.reduce((s, i) => s + i.quantity, 0)}</td>
+                    <td className="font-medium">
+                      {order.total.toLocaleString()} تومان
+                    </td>
+                    <td>
+                      <span
+                        className={`v-badge ${statusBadge[order.status] || "v-badge-secondary"}`}
+                      >
+                        {statusLabels[order.status] || order.status}
+                      </span>
+                    </td>
+                    <td
+                      className="text-xs"
+                      style={{ color: "var(--v-text-secondary)" }}
+                    >
+                      <JalaliDate date={order.createdAt} showTime />
+                    </td>
+                    <td>
+                      <select
+                        className="v-select w-auto text-xs py-1 min-w-[100px]"
+                        value={order.status}
+                        onChange={(e) => handleStatus(order.id, e.target.value)}
+                      >
+                        {statusOptions
+                          .filter((o) => o.value)
+                          .map(({ value, label }) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {totalPages > 1 && (
         <div className="flex justify-center gap-2 mt-6">
+          <button
+            onClick={() => setPage(Math.max(1, page - 1))}
+            disabled={page <= 1}
+            className="v-btn v-btn-secondary v-btn-sm"
+          >
+            <Icon icon="tabler:chevron-right" className="w-4 h-4" />
+          </button>
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button key={p} onClick={() => setPage(p)}
-              className={`px-4 py-2 rounded-lg text-sm ${
-                page === p ? 'bg-indigo-600 text-white' : 'bg-white border text-gray-600 hover:bg-gray-50'
-              }`}>
+            <button
+              key={p}
+              onClick={() => setPage(p)}
+              className="v-btn v-btn-sm"
+              style={{
+                background: page === p ? "var(--v-primary)" : "transparent",
+                color: page === p ? "white" : "var(--v-text-secondary)",
+                border: page === p ? "none" : "1px solid var(--v-border)",
+              }}
+            >
               {p}
             </button>
           ))}
+          <button
+            onClick={() => setPage(Math.min(totalPages, page + 1))}
+            disabled={page >= totalPages}
+            className="v-btn v-btn-secondary v-btn-sm"
+          >
+            <Icon icon="tabler:chevron-left" className="w-4 h-4" />
+          </button>
         </div>
       )}
     </div>

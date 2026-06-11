@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma.service';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../../common/prisma.service";
 
 @Injectable()
 export class UsersService {
@@ -8,7 +8,13 @@ export class UsersService {
   async findAll() {
     return this.prisma.user.findMany({
       select: {
-        id: true, name: true, email: true, phone: true, role: true, isActive: true, createdAt: true,
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
         _count: { select: { orders: true, reviews: true } },
       },
     });
@@ -18,17 +24,29 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
-        id: true, name: true, email: true, phone: true, role: true, isActive: true, createdAt: true,
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
         _count: { select: { orders: true, reviews: true } },
         orders: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           take: 20,
-          select: { id: true, orderNumber: true, total: true, status: true, createdAt: true },
+          select: {
+            id: true,
+            orderNumber: true,
+            total: true,
+            status: true,
+            createdAt: true,
+          },
         },
       },
     });
 
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) throw new NotFoundException("User not found");
     return user;
   }
 }

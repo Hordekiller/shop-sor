@@ -1,7 +1,14 @@
 {
   "name": "@atlas-shop/api",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
+  "description": "NestJS backend API for Atlas Shop",
+  "license": "MIT",
+  "author": "فروشگاه اطلس",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Hordekiller/shop-sor.git"
+  },
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",
@@ -15,20 +22,27 @@
   "dependencies": {
     "@nestjs/common": "^11.1.0",
     "@nestjs/core": "^11.1.0",
+    "@nestjs/event-emitter": "^3.1.0",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.1.26",
     "@nestjs/swagger": "^11.0.0",
+    "@nestjs/throttler": "^6.5.0",
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
     "dotenv": "^16.4.0",
+    "helmet": "^8.2.0",
     "multer": "^2.1.1",
+    "nodemailer": "^8.0.11",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "pdfkit": "^0.19.1",
     "reflect-metadata": "^0.2.1",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "sanitize-html": "^2.17.5",
+    "sharp": "^0.34.5"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -41,9 +55,11 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^22.0.0",
     "@types/passport-jwt": "^4.0.1",
+    "@types/sanitize-html": "^2.16.1",
     "eslint": "^9.0.0",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.61.0"
   }
 }

@@ -1,6 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma.service';
-import { CreateCategoryDto, UpdateCategoryDto } from './dto/create-category.dto';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
+import { PrismaService } from "../../common/prisma.service";
+import {
+  CreateCategoryDto,
+  UpdateCategoryDto,
+} from "./dto/create-category.dto";
 
 @Injectable()
 export class CategoriesService {
@@ -11,7 +18,7 @@ export class CategoriesService {
       include: {
         _count: { select: { products: true, children: true } },
       },
-      orderBy: { sortOrder: 'asc' },
+      orderBy: { sortOrder: "asc" },
     });
   }
 
@@ -20,7 +27,7 @@ export class CategoriesService {
       include: {
         _count: { select: { products: true } },
       },
-      orderBy: { sortOrder: 'asc' },
+      orderBy: { sortOrder: "asc" },
     });
 
     const map = new Map<number, any>();
@@ -51,7 +58,7 @@ export class CategoriesService {
       },
     });
 
-    if (!category) throw new NotFoundException('Category not found');
+    if (!category) throw new NotFoundException("Category not found");
     return category;
   }
 
@@ -64,7 +71,7 @@ export class CategoriesService {
       },
     });
 
-    if (!category) throw new NotFoundException('Category not found');
+    if (!category) throw new NotFoundException("Category not found");
     return category;
   }
 
@@ -80,11 +87,23 @@ export class CategoriesService {
   async remove(id: number) {
     await this.findById(id);
 
+    // Check if any product uses this as main category
+    const mainProductCount = await this.prisma.product.count({
+      where: { categoryId: id },
+    });
+    if (mainProductCount > 0) {
+      throw new BadRequestException(
+        `${mainProductCount} محصول از این دسته‌بندی به عنوان دسته اصلی استفاده می‌کنند. ابتدا محصولات را به دسته دیگر منتقل کنید.`,
+      );
+    }
+
+    // Detach children
     await this.prisma.category.updateMany({
       where: { parentId: id },
       data: { parentId: null },
     });
 
+    // Delete category (ProductCategory entries will cascade-delete)
     return this.prisma.category.delete({ where: { id } });
   }
 }

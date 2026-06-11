@@ -1,12 +1,12 @@
-import { IsString, IsOptional, IsInt, Min } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsOptional, IsInt, Min } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreateCategoryDto {
-  @ApiProperty({ example: 'لوازم الکترونیکی' })
+  @ApiProperty({ example: "لوازم الکترونیکی" })
   @IsString()
   name: string;
 
-  @ApiProperty({ example: 'electronics' })
+  @ApiProperty({ example: "electronics" })
   @IsString()
   slug: string;
 
@@ -14,6 +14,16 @@ export class CreateCategoryDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  metaTitle?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  metaDesc?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -42,6 +52,16 @@ export class UpdateCategoryDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  metaTitle?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  metaDesc?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

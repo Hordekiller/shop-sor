@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { toJalaliHuman, toJalaliDateTime } from '@/lib/date';
+import { toJalaliHuman, toJalaliDateTime } from "@/lib/date";
 
 interface Props {
   date: Date | string;
