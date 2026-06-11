@@ -43,3 +43,8 @@ uploads/
 
 # Next.js
 apps/*/next-env.d.ts
+
+# Internal / AI instructions
+AGENTS.md
+AUDIT_CHECKLIST.md
+AUDIT_REPORT.md
