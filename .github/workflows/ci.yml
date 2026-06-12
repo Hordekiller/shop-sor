@@ -131,10 +131,22 @@ jobs:
           # Start server
           node dist/main.js &
           SERVER_PID=$!
-          sleep 5
+          sleep 8
+
+          # Helper: print response on failure
+          check() {
+            local code
+            code=$(curl -s -o /tmp/resp.txt -w "%{http_code}" "$@")
+            echo "-> HTTP $code"
+            if [ "$code" != "200" ] && [ "$code" != "201" ]; then
+              cat /tmp/resp.txt
+              kill $SERVER_PID 2>/dev/null
+              exit 1
+            fi
+          }
 
           echo "=== Health check ==="
-          curl -s -o /dev/null -w "HTTP %{http_code}\n" http://localhost:8000/api/docs
+          curl -s -o /dev/null -w "HTTP %{http_code}\n" http://localhost:8000/api/docs || { echo "Server not ready!"; kill $SERVER_PID 2>/dev/null; exit 1; }
 
           echo "=== Register ==="
           curl -s -X POST http://localhost:8000/api/v1/auth/register \
@@ -158,18 +170,18 @@ jobs:
             | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Categories: {len(d)}')"
 
           echo "=== Create category ==="
-          curl -s -X POST http://localhost:8000/api/v1/categories \
+          check -X POST http://localhost:8000/api/v1/categories \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $TOKEN" \
-            -d '{"name":"الکترونیک","slug":"electronics"}' \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Cat: {d[\"name\"]} ({d[\"id\"]})')"
+            -d '{"name":"الکترونیک","slug":"electronics"}' && \
+          python3 -c "import sys,json; d=json.load(open('/tmp/resp.txt')); print(f'Cat: {d[\"name\"]} ({d[\"id\"]})')"
 
           echo "=== Create product ==="
-          curl -s -X POST http://localhost:8000/api/v1/products \
+          check -X POST http://localhost:8000/api/v1/products \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $TOKEN" \
-            -d '{"title":"هدفون بلوتوث","slug":"bluetooth-headphone","price":2500000,"stock":50,"categoryId":1}' \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Product: {d[\"title\"]} ({d[\"id\"]})')"
+            -d '{"title":"هدفون بلوتوث","slug":"bluetooth-headphone","price":2500000,"stock":50,"categoryId":1}' && \
+          python3 -c "import sys,json; d=json.load(open('/tmp/resp.txt')); print(f'Product: {d[\"title\"]} ({d[\"id\"]})')"
 
           echo "=== List products ==="
           curl -s "http://localhost:8000/api/v1/products?sort=newest" \
@@ -180,18 +192,18 @@ jobs:
             | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Methods: {len(d)}')"
 
           echo "=== Create order ==="
-          curl -s -X POST http://localhost:8000/api/v1/orders \
+          check -X POST http://localhost:8000/api/v1/orders \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $TOKEN" \
-            -d '{"items":[{"productId":1,"quantity":2}],"shippingMethod":"post_pishtaz","agreedToTerms":true}' \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Order: {d[\"orderNumber\"]} / {d[\"total\"]} ریال / {d[\"status\"]}')"
+            -d '{"items":[{"productId":1,"quantity":2}],"shippingMethod":"post_pishtaz","agreedToTerms":true}' && \
+          python3 -c "import sys,json; d=json.load(open('/tmp/resp.txt')); print(f'Order: {d[\"orderNumber\"]} / {d[\"total\"]} ریال / {d[\"status\"]}')"
 
           echo "=== Create coupon ==="
-          curl -s -X POST http://localhost:8000/api/v1/coupons \
+          check -X POST http://localhost:8000/api/v1/coupons \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $TOKEN" \
-            -d '{"code":"SUMMER20","type":"percent","value":20,"maxUses":50}' \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Coupon: {d[\"code\"]} - %{d[\"value\"]}')"
+            -d '{"code":"SUMMER20","type":"percent","value":20,"maxUses":50}' && \
+          python3 -c "import sys,json; d=json.load(open('/tmp/resp.txt')); print(f'Coupon: {d[\"code\"]} - %{d[\"value\"]}')"
 
           echo "=== Validate coupon ==="
           curl -s "http://localhost:8000/api/v1/coupons/validate?code=SUMMER20&subtotal=5000000" \
@@ -202,23 +214,23 @@ jobs:
             | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Gateways: {len(d)}')"
 
           echo "=== Payment request ==="
-          curl -s -X POST http://localhost:8000/api/v1/payments/request/1 \
+          check -X POST http://localhost:8000/api/v1/payments/request/1 \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $TOKEN" \
-            -d '{"gateway":"zarinpal"}' \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Authority: {d[\"authority\"]}, URL: {d[\"paymentUrl\"][:50]}...')"
+            -d '{"gateway":"zarinpal"}' && \
+          python3 -c "import sys,json; d=json.load(open('/tmp/resp.txt')); print(f'Authority: {d[\"authority\"]}, URL: {d[\"paymentUrl\"][:50]}...')"
 
           echo "=== Admin stats ==="
-          curl -s http://localhost:8000/api/v1/admin/stats \
-            -H "Authorization: Bearer $TOKEN" \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Stats: {d[\"totalUsers\"]} users, {d[\"totalProducts\"]} products, {d[\"totalOrders\"]} orders, {d[\"totalRevenue\"]} revenue')"
+          check http://localhost:8000/api/v1/admin/stats \
+            -H "Authorization: Bearer $TOKEN" && \
+          python3 -c "import sys,json; d=json.load(open('/tmp/resp.txt')); print(f'Stats: {d[\"totalUsers\"]} users, {d[\"totalProducts\"]} products, {d[\"totalOrders\"]} orders, {d[\"totalRevenue\"]} revenue')"
 
           echo "=== Update profile ==="
-          curl -s -X PUT http://localhost:8000/api/v1/auth/profile \
+          check -X PUT http://localhost:8000/api/v1/auth/profile \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $TOKEN" \
-            -d '{"name":"مدیر بروزشده","phone":"09120000000"}' \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Updated: {d[\"name\"]} / {d[\"phone\"]}')"
+            -d '{"name":"مدیر بروزشده","phone":"09120000000"}' && \
+          python3 -c "import sys,json; d=json.load(open('/tmp/resp.txt')); print(f'Updated: {d[\"name\"]} / {d[\"phone\"]}')"
 
           echo ""
           echo "========================================"
