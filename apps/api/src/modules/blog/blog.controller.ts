@@ -45,7 +45,7 @@ export class BlogController {
     return this.blog.getPosts({
       page: Number(page) || 1,
       limit: Number(limit) || 20,
-      status: "published",
+      status: "PUBLISHED",
       categoryId: categoryId ? Number(categoryId) : undefined,
       tagId: tagId ? Number(tagId) : undefined,
       search,

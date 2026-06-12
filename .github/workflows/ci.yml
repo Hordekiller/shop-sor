@@ -128,111 +128,103 @@ jobs:
       - name: Run smoke tests
         working-directory: apps/api
         run: |
+          set +e
+          FAILED=0
+
           # Start server
           node dist/main.js &
           SERVER_PID=$!
-          sleep 8
-
-          # Helper: print response on failure
-          check() {
-            local code
-            code=$(curl -s -o /tmp/resp.txt -w "%{http_code}" "$@")
-            echo "-> HTTP $code"
-            if [ "$code" != "200" ] && [ "$code" != "201" ]; then
-              cat /tmp/resp.txt
-              kill $SERVER_PID 2>/dev/null
-              exit 1
-            fi
-          }
+          sleep 10
 
           echo "=== Health check ==="
-          curl -s -o /dev/null -w "HTTP %{http_code}\n" http://localhost:8000/api/docs || { echo "Server not ready!"; kill $SERVER_PID 2>/dev/null; exit 1; }
+          HTTP=$(curl -s -o /tmp/resp.txt -w "%{http_code}" http://localhost:8000/api/docs)
+          echo "HTTP $HTTP"
+          [ "$HTTP" = "200" ] || { cat /tmp/resp.txt; FAILED=1; }
+
+          api() { curl -s -o /tmp/resp.txt -w "%{http_code}" "$@"; echo "-> HTTP $?"; }
 
           echo "=== Register ==="
-          curl -s -X POST http://localhost:8000/api/v1/auth/register \
-            -H "Content-Type: application/json" \
-            -d '{"name":"مدیر آزمون","email":"ci@test.com","password":"test123"}' \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'User: {d[\"user\"][\"name\"]}')"
+          HTTP=$(api -X POST http://localhost:8000/api/v1/auth/register -H "Content-Type: application/json" -d '{"name":"مدیر آزمون","email":"ci@test.com","password":"test123"}')
+          if [ "$HTTP" = "200" ] || [ "$HTTP" = "201" ]; then RESP=$(python3 -c "import json; d=json.load(open('/tmp/resp.txt')); print(f'OK: {d[\"user\"][\"name\"]}')" 2>&1); else RESP="FAIL"; fi
+          echo "$RESP"; [ "$RESP" = "FAIL" ] && { echo "Body:"; cat /tmp/resp.txt; FAILED=1; }
 
           echo "=== Login ==="
-          TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
-            -H "Content-Type: application/json" \
-            -d '{"email":"ci@test.com","password":"test123"}' \
-            | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])" 2>/dev/null)
+          HTTP=$(api -X POST http://localhost:8000/api/v1/auth/login -H "Content-Type: application/json" -d '{"email":"ci@test.com","password":"test123"}')
+          TOKEN=""; if [ "$HTTP" = "200" ] || [ "$HTTP" = "201" ]; then TOKEN=$(python3 -c "import json; print(json.load(open('/tmp/resp.txt'))['token'])" 2>/dev/null); echo "Token obtained"; else echo "FAIL:"; cat /tmp/resp.txt; FAILED=1; fi
 
           echo "=== Profile ==="
-          curl -s http://localhost:8000/api/v1/auth/me \
-            -H "Authorization: Bearer $TOKEN" \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Profile: {d[\"name\"]} / {d[\"email\"]}')"
+          HTTP=$(api http://localhost:8000/api/v1/auth/me -H "Authorization: Bearer $TOKEN")
+          if [ "$HTTP" = "200" ]; then RESP=$(python3 -c "import json; d=json.load(open('/tmp/resp.txt')); print(f'OK: {d[\"name\"]} / {d[\"email\"]}')" 2>&1); else RESP="FAIL"; fi
+          echo "$RESP"; [ "$RESP" = "FAIL" ] && { echo "Body:"; cat /tmp/resp.txt; FAILED=1; }
 
           echo "=== Categories ==="
-          curl -s http://localhost:8000/api/v1/categories \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Categories: {len(d)}')"
+          HTTP=$(api http://localhost:8000/api/v1/categories)
+          if [ "$HTTP" = "200" ]; then RESP=$(python3 -c "import json; d=json.load(open('/tmp/resp.txt')); print(f'OK: {len(d)} categories')" 2>&1); else RESP="FAIL"; fi
+          echo "$RESP"; [ "$RESP" = "FAIL" ] && { echo "Body:"; cat /tmp/resp.txt; FAILED=1; }
 
           echo "=== Create category ==="
-          check -X POST http://localhost:8000/api/v1/categories \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $TOKEN" \
-            -d '{"name":"الکترونیک","slug":"electronics"}' && \
-          python3 -c "import sys,json; d=json.load(open('/tmp/resp.txt')); print(f'Cat: {d[\"name\"]} ({d[\"id\"]})')"
+          HTTP=$(api -X POST http://localhost:8000/api/v1/categories -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -d '{"name":"الکترونیک","slug":"electronics"}')
+          if [ "$HTTP" = "200" ] || [ "$HTTP" = "201" ]; then RESP=$(python3 -c "import json; d=json.load(open('/tmp/resp.txt')); print(f'OK: {d[\"name\"]} ({d[\"id\"]})')" 2>&1); else RESP="FAIL"; fi
+          echo "$RESP"; [ "$RESP" = "FAIL" ] && { echo "Body:"; cat /tmp/resp.txt; FAILED=1; }
 
           echo "=== Create product ==="
-          check -X POST http://localhost:8000/api/v1/products \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $TOKEN" \
-            -d '{"title":"هدفون بلوتوث","slug":"bluetooth-headphone","price":2500000,"stock":50,"categoryId":1}' && \
-          python3 -c "import sys,json; d=json.load(open('/tmp/resp.txt')); print(f'Product: {d[\"title\"]} ({d[\"id\"]})')"
+          HTTP=$(api -X POST http://localhost:8000/api/v1/products -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -d '{"title":"هدفون بلوتوث","slug":"bluetooth-headphone","price":2500000,"stock":50,"categoryId":1}')
+          if [ "$HTTP" = "200" ] || [ "$HTTP" = "201" ]; then RESP=$(python3 -c "import json; d=json.load(open('/tmp/resp.txt')); print(f'OK: {d[\"title\"]} ({d[\"id\"]})')" 2>&1); else RESP="FAIL"; fi
+          echo "$RESP"; [ "$RESP" = "FAIL" ] && { echo "Body:"; cat /tmp/resp.txt; FAILED=1; }
 
           echo "=== List products ==="
-          curl -s "http://localhost:8000/api/v1/products?sort=newest" \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Products: {d[\"total\"]}')"
+          HTTP=$(api "http://localhost:8000/api/v1/products?sort=newest")
+          if [ "$HTTP" = "200" ]; then RESP=$(python3 -c "import json; d=json.load(open('/tmp/resp.txt')); print(f'OK: {d[\"total\"]} products')" 2>&1); else RESP="FAIL"; fi
+          echo "$RESP"; [ "$RESP" = "FAIL" ] && { echo "Body:"; cat /tmp/resp.txt; FAILED=1; }
 
           echo "=== Shipping methods ==="
-          curl -s http://localhost:8000/api/v1/shipping/methods \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Methods: {len(d)}')"
+          HTTP=$(api http://localhost:8000/api/v1/shipping/methods)
+          if [ "$HTTP" = "200" ]; then RESP=$(python3 -c "import json; d=json.load(open('/tmp/resp.txt')); print(f'OK: {len(d)} methods')" 2>&1); else RESP="FAIL"; fi
+          echo "$RESP"; [ "$RESP" = "FAIL" ] && { echo "Body:"; cat /tmp/resp.txt; FAILED=1; }
 
           echo "=== Create order ==="
-          check -X POST http://localhost:8000/api/v1/orders \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $TOKEN" \
-            -d '{"items":[{"productId":1,"quantity":2}],"shippingMethod":"post_pishtaz","agreedToTerms":true}' && \
-          python3 -c "import sys,json; d=json.load(open('/tmp/resp.txt')); print(f'Order: {d[\"orderNumber\"]} / {d[\"total\"]} ریال / {d[\"status\"]}')"
+          HTTP=$(api -X POST http://localhost:8000/api/v1/orders -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -d '{"items":[{"productId":1,"quantity":2}],"shippingMethod":"post_pishtaz","agreedToTerms":true}')
+          if [ "$HTTP" = "200" ] || [ "$HTTP" = "201" ]; then RESP=$(python3 -c "import json; d=json.load(open('/tmp/resp.txt')); print(f'OK: {d[\"orderNumber\"]} / {d[\"total\"]}')" 2>&1); else RESP="FAIL"; fi
+          echo "$RESP"; [ "$RESP" = "FAIL" ] && { echo "Body:"; cat /tmp/resp.txt; FAILED=1; }
 
           echo "=== Create coupon ==="
-          check -X POST http://localhost:8000/api/v1/coupons \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $TOKEN" \
-            -d '{"code":"SUMMER20","type":"percent","value":20,"maxUses":50}' && \
-          python3 -c "import sys,json; d=json.load(open('/tmp/resp.txt')); print(f'Coupon: {d[\"code\"]} - %{d[\"value\"]}')"
+          HTTP=$(api -X POST http://localhost:8000/api/v1/coupons -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -d '{"code":"SUMMER20","type":"percent","value":20,"maxUses":50}')
+          if [ "$HTTP" = "200" ] || [ "$HTTP" = "201" ]; then RESP=$(python3 -c "import json; d=json.load(open('/tmp/resp.txt')); print(f'OK: {d[\"code\"]} - %{d[\"value\"]}')" 2>&1); else RESP="FAIL"; fi
+          echo "$RESP"; [ "$RESP" = "FAIL" ] && { echo "Body:"; cat /tmp/resp.txt; FAILED=1; }
 
           echo "=== Validate coupon ==="
-          curl -s "http://localhost:8000/api/v1/coupons/validate?code=SUMMER20&subtotal=5000000" \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Valid: {d[\"valid\"]}, Discount: {d[\"discount\"]}')"
+          HTTP=$(api "http://localhost:8000/api/v1/coupons/validate?code=SUMMER20&subtotal=5000000")
+          if [ "$HTTP" = "200" ]; then RESP=$(python3 -c "import json; d=json.load(open('/tmp/resp.txt')); print(f'OK: valid={d[\"valid\"]}, discount={d[\"discount\"]}')" 2>&1); else RESP="FAIL"; fi
+          echo "$RESP"; [ "$RESP" = "FAIL" ] && { echo "Body:"; cat /tmp/resp.txt; FAILED=1; }
 
           echo "=== Payment gateways ==="
-          curl -s http://localhost:8000/api/v1/payments/gateways \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Gateways: {len(d)}')"
+          HTTP=$(api http://localhost:8000/api/v1/payments/gateways)
+          if [ "$HTTP" = "200" ]; then RESP=$(python3 -c "import json; d=json.load(open('/tmp/resp.txt')); print(f'OK: {len(d)} gateways')" 2>&1); else RESP="FAIL"; fi
+          echo "$RESP"; [ "$RESP" = "FAIL" ] && { echo "Body:"; cat /tmp/resp.txt; FAILED=1; }
 
           echo "=== Payment request ==="
-          check -X POST http://localhost:8000/api/v1/payments/request/1 \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $TOKEN" \
-            -d '{"gateway":"zarinpal"}' && \
-          python3 -c "import sys,json; d=json.load(open('/tmp/resp.txt')); print(f'Authority: {d[\"authority\"]}, URL: {d[\"paymentUrl\"][:50]}...')"
+          HTTP=$(api -X POST http://localhost:8000/api/v1/payments/request/1 -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -d '{"gateway":"zarinpal"}')
+          if [ "$HTTP" = "200" ] || [ "$HTTP" = "201" ]; then RESP=$(python3 -c "import json; d=json.load(open('/tmp/resp.txt')); print(f'OK: {d[\"authority\"]}')" 2>&1); else RESP="FAIL"; fi
+          echo "$RESP"; [ "$RESP" = "FAIL" ] && { echo "Body:"; cat /tmp/resp.txt; FAILED=1; }
 
           echo "=== Admin stats ==="
-          check http://localhost:8000/api/v1/admin/stats \
-            -H "Authorization: Bearer $TOKEN" && \
-          python3 -c "import sys,json; d=json.load(open('/tmp/resp.txt')); print(f'Stats: {d[\"totalUsers\"]} users, {d[\"totalProducts\"]} products, {d[\"totalOrders\"]} orders, {d[\"totalRevenue\"]} revenue')"
+          HTTP=$(api http://localhost:8000/api/v1/admin/stats -H "Authorization: Bearer $TOKEN")
+          if [ "$HTTP" = "200" ]; then RESP=$(python3 -c "import json; d=json.load(open('/tmp/resp.txt')); print(f'OK: {d[\"totalUsers\"]} users, {d[\"totalProducts\"]} products, {d[\"totalOrders\"]} orders')" 2>&1); else RESP="FAIL"; fi
+          echo "$RESP"; [ "$RESP" = "FAIL" ] && { echo "Body:"; cat /tmp/resp.txt; FAILED=1; }
 
           echo "=== Update profile ==="
-          check -X PUT http://localhost:8000/api/v1/auth/profile \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $TOKEN" \
-            -d '{"name":"مدیر بروزشده","phone":"09120000000"}' && \
-          python3 -c "import sys,json; d=json.load(open('/tmp/resp.txt')); print(f'Updated: {d[\"name\"]} / {d[\"phone\"]}')"
+          HTTP=$(api -X PUT http://localhost:8000/api/v1/auth/profile -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -d '{"name":"مدیر بروزشده","phone":"09120000000"}')
+          if [ "$HTTP" = "200" ] || [ "$HTTP" = "201" ]; then RESP=$(python3 -c "import json; d=json.load(open('/tmp/resp.txt')); print(f'OK: {d[\"name\"]} / {d[\"phone\"]}')" 2>&1); else RESP="FAIL"; fi
+          echo "$RESP"; [ "$RESP" = "FAIL" ] && { echo "Body:"; cat /tmp/resp.txt; FAILED=1; }
 
           echo ""
+          if [ "$FAILED" = "1" ]; then
+            echo "========================================"
+            echo "  SOME SMOKE TESTS FAILED!"
+            echo "========================================"
+            kill $SERVER_PID 2>/dev/null
+            exit 1
+          fi
           echo "========================================"
           echo "  ALL SMOKE TESTS PASSED SUCCESSFULLY"
           echo "========================================"
