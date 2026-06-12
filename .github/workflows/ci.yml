@@ -190,7 +190,7 @@ jobs:
           curl -s -X POST http://localhost:8000/api/v1/coupons \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $TOKEN" \
-            -d '{"code":"SUMMER20","type":"PERCENT","value":20,"maxUses":50}' \
+            -d '{"code":"SUMMER20","type":"percent","value":20,"maxUses":50}' \
             | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Coupon: {d[\"code\"]} - %{d[\"value\"]}')"
 
           echo "=== Validate coupon ==="
