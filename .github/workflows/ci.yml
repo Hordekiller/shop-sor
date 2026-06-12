@@ -141,7 +141,7 @@ jobs:
           echo "HTTP $HTTP"
           [ "$HTTP" = "200" ] || { cat /tmp/resp.txt; FAILED=1; }
 
-          api() { curl -s -o /tmp/resp.txt -w "%{http_code}" "$@"; echo "-> HTTP $?"; }
+          api() { curl -s -o /tmp/resp.txt -w "%{http_code}" "$@"; }
 
           echo "=== Register ==="
           HTTP=$(api -X POST http://localhost:8000/api/v1/auth/register -H "Content-Type: application/json" -d '{"name":"مدیر آزمون","email":"ci@test.com","password":"test123"}')
