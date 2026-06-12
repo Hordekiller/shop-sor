@@ -259,14 +259,40 @@ docker compose up -d
 
 <div dir="rtl">
 
-> 👷 به زودی...
+### 🏪 فروشگاه
+![فروشگاه](./Screenshots/Atlas%20ScreenShots1.png)
+![فروشگاه](./Screenshots/Atlas%20ScreenShots3.png)
+![فروشگاه](./Screenshots/Atlas%20ScreenShots5.png)
+![فروشگاه](./Screenshots/Atlas%20ScreenShots7.png)
+![فروشگاه](./Screenshots/Atlas%20ScreenShots9.png)
+![فروشگاه](./Screenshots/Atlas%20ScreenShots8.png)
+![فروشگاه](./Screenshots/Atlas%20ScreenShots6.png)
+![فروشگاه](./Screenshots/Atlas%20ScreenShots14.png)
+![فروشگاه](./Screenshots/Atlas%20ScreenShots15.png)
+![فروشگاه](./Screenshots/Atlas%20ScreenShots17.png)
+![فروشگاه](./Screenshots/Atlas%20ScreenShots30.png)
+![فروشگاه](./Screenshots/Atlas%20ScreenShots31.png)
 
-| بخش             | تصویر |
-| --------------- | ----- |
-| 🏪 فروشگاه      | ![]() |
-| 👑 پنل مدیریت   | ![]() |
-| 🧾 جزئیات سفارش | ![]() |
-| 📊 داشبورد      | ![]() |
+### 👑 پنل مدیریت
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots2.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots4.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots10.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots11.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots12.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots13.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots16.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots18.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots19.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots20.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots21.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots22.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots23.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots24.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots25.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots26.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots27.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots28.png)
+![پنل مدیریت](./Screenshots/Atlas%20ScreenShots29.png)
 
 </div>
 

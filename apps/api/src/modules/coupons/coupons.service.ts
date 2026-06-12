@@ -150,10 +150,17 @@ export class CouponsService {
     });
     if (existing) throw new BadRequestException("Coupon code already exists");
 
+    const type =
+      dto.type === "percent"
+        ? "PERCENT"
+        : dto.type === "fixed"
+          ? "FIXED"
+          : ("PERCENT" as any);
+
     return this.prisma.coupon.create({
       data: {
         code: dto.code,
-        type: dto.type as any,
+        type,
         value: dto.value,
         minOrder: dto.minOrder ?? 0,
         maxUsesPerUser: dto.maxUsesPerUser ?? 1,

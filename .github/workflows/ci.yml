@@ -49,7 +49,7 @@ jobs:
 
       - name: Lint API
         working-directory: apps/api
-        run: npm run lint || true
+        run: npm run lint
 
   build:
     name: Build All Apps
@@ -183,14 +183,14 @@ jobs:
           curl -s -X POST http://localhost:8000/api/v1/orders \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $TOKEN" \
-            -d '{"items":[{"productId":1,"quantity":2}],"shippingMethod":"post_pishtaz"}' \
+            -d '{"items":[{"productId":1,"quantity":2}],"shippingMethod":"post_pishtaz","agreedToTerms":true}' \
             | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Order: {d[\"orderNumber\"]} / {d[\"total\"]} ریال / {d[\"status\"]}')"
 
           echo "=== Create coupon ==="
           curl -s -X POST http://localhost:8000/api/v1/coupons \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $TOKEN" \
-            -d '{"code":"SUMMER20","type":"percent","value":20,"maxUses":50}' \
+            -d '{"code":"SUMMER20","type":"PERCENT","value":20,"maxUses":50}' \
             | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Coupon: {d[\"code\"]} - %{d[\"value\"]}')"
 
           echo "=== Validate coupon ==="
